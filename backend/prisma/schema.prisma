@@ -1,0 +1,113 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(uuid())
+  username  String     @unique
+  password  String
+  role      String     @default("user")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @default(now()) @updatedAt
+  deletedAt DateTime?
+  files     File[]     // Relation to uploaded files
+  auditLogs AuditLog[] // Relation to audit logs
+}
+
+model SectionType {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  sections  Section[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  deletedAt DateTime?
+}
+
+model Section {
+  id          String      @id @default(uuid())
+  name        String
+  slug        String?     @unique
+  description String      @db.Text
+  active      Boolean     @default(true)
+  type        SectionType @relation(fields: [typeId], references: [id])
+  typeId      String
+  order       Int         @default(0)  // Add this line
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @default(now()) @updatedAt
+  deletedAt   DateTime?
+  files       File[]      // Relation to files in this section
+  folders     Folder[]    // Relation to folders in this section
+
+  @@index([typeId])
+  @@index([slug])
+}
+
+model Folder {
+  id          String    @id @default(uuid())
+  name        String
+  description String?   @db.Text
+  section     Section   @relation(fields: [sectionId], references: [id])
+  sectionId   String
+  parent      Folder?   @relation("FolderToFolder", fields: [parentId], references: [id])
+  parentId    String?
+  children    Folder[]  @relation("FolderToFolder")
+  files       File[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+  deletedAt   DateTime?
+  order       Int
+
+  @@index([sectionId])
+  @@index([parentId])
+}
+
+model File {
+  id            String    @id @default(uuid())
+  filename      String    // Original filename
+  title         String?
+  path          String    // Path where file is stored
+  relativePath  String?   // Relative path from upload directory
+  folderPath    String?   // Complete folder path
+  currentFolder String?   // Current folder name
+  mimetype      String    // File type (e.g., application/pdf)
+  size          Int       // File size in bytes
+  uploadedBy    User      @relation(fields: [userId], references: [id])
+  userId        String
+  section       Section?  @relation(fields: [sectionId], references: [id])
+  sectionId     String?
+  folder        Folder?   @relation(fields: [folderId], references: [id])
+  folderId      String?
+  isArchived    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+  deletedAt     DateTime?
+  metadata      Json?     // Additional metadata as JSON
+
+  @@index([userId])
+  @@index([sectionId])
+  @@index([folderPath])
+  @@index([currentFolder])
+  @@index([folderId])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entity, entityId])
+}
