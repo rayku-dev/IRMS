@@ -176,7 +176,7 @@ const DashboardLayout = () => {
               </Button>
               <div className="hidden lg:block">
                 <h2 className="text-lg font-semibold text-foreground">
-                  Inventory Records Management System
+                  Electronic Records Management System
                 </h2>
               </div>
             </div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
-import { type FileData, getFileBlob, downloadFile, getPublicLink } from '../../services/fileService';
+import { type FileData, downloadFile, getPublicLink } from '../../services/fileService';
 import { toast } from 'sonner';
 
 interface FileViewerModalProps {
@@ -48,9 +48,8 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({ isOpen, onClose, file
       }
 
       try {
-        const blob = await getFileBlob(file.id, file.mimeType);
-        url = URL.createObjectURL(blob);
-        setBlobUrl(url);
+        const publicUrl = await getPublicLink(file.id);
+        setBlobUrl(publicUrl);
       } catch (error: any) {
         toast.error('Failed to load file preview');
         console.error(error);

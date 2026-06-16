@@ -133,7 +133,7 @@ export const downloadFile = async (req: Request, res: Response): Promise<void> =
       download: file.filename,
     });
 
-    res.redirect(data.publicUrl);
+    res.json({ url: data.publicUrl });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }

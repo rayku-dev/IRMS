@@ -37,20 +37,26 @@ export const moveFile = async (id: string, newFolderId: string): Promise<FileDat
 };
 
 export const downloadFile = async (id: string, originalName: string) => {
-  const response = await api.get(`/files/download/${id}`, { responseType: 'blob' });
-  const url = window.URL.createObjectURL(new Blob([response.data]));
+  // Get the pure public URL without the ?download parameter
+  const response = await api.get(`/files/${id}/public-link`);
+  const publicUrl = response.data.url;
+  
+  // Fetch the actual file binary data
+  const fileResponse = await fetch(publicUrl);
+  const blob = await fileResponse.blob();
+  
+  // Create a local blob URL and trigger download
+  const blobUrl = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
-  link.href = url;
+  link.href = blobUrl;
   link.setAttribute('download', originalName);
   document.body.appendChild(link);
   link.click();
   link.remove();
+  window.URL.revokeObjectURL(blobUrl);
 };
 
-export const getFileBlob = async (id: string, mimeType: string): Promise<Blob> => {
-  const response = await api.get(`/files/download/${id}`, { responseType: 'blob' });
-  return new Blob([response.data], { type: mimeType });
-};
+
 
 export const getPublicLink = async (id: string): Promise<string> => {
   const response = await api.get(`/files/${id}/public-link`);
