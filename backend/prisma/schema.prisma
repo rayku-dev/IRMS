@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -35,7 +35,7 @@ model Section {
   id          String      @id @default(uuid())
   name        String
   slug        String?     @unique
-  description String      @db.Text
+  description String
   active      Boolean     @default(true)
   type        SectionType @relation(fields: [typeId], references: [id])
   typeId      String
@@ -53,7 +53,7 @@ model Section {
 model Folder {
   id          String    @id @default(uuid())
   name        String
-  description String?   @db.Text
+  description String?
   section     Section   @relation(fields: [sectionId], references: [id])
   sectionId   String
   parent      Folder?   @relation("FolderToFolder", fields: [parentId], references: [id])
