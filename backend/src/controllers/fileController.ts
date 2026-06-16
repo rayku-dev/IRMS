@@ -4,6 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import jwt from 'jsonwebtoken';
 
+const UPLOAD_DIR = process.env.VERCEL ? path.join('/tmp', 'uploads') : path.join(process.cwd(), 'uploads');
+
 export const uploadFile = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.file) {
@@ -86,7 +88,7 @@ export const deleteFile = async (req: Request, res: Response): Promise<void> => 
     }
 
     // Delete from disk
-    const filePath = path.join(process.cwd(), 'uploads', file.path);
+    const filePath = path.join(UPLOAD_DIR, file.path);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
@@ -110,7 +112,7 @@ export const downloadFile = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const filePath = path.join(process.cwd(), 'uploads', file.path);
+    const filePath = path.join(UPLOAD_DIR, file.path);
     if (!fs.existsSync(filePath)) {
       res.status(404).json({ message: 'File not found on disk' });
       return;
@@ -187,7 +189,7 @@ export const downloadPublicFile = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    const filePath = path.join(process.cwd(), 'uploads', file.path);
+    const filePath = path.join(UPLOAD_DIR, file.path);
     if (!fs.existsSync(filePath)) {
       res.status(404).json({ message: 'File not found on disk' });
       return;
