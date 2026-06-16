@@ -124,7 +124,7 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({ isOpen, onClose, file
           ) : isOffice && officeUrl ? (
             <div className="w-full h-full relative">
               <iframe 
-                src={`https://docs.google.com/viewer?url=${encodeURIComponent(officeUrl)}&embedded=true`} 
+                src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(officeUrl)}`} 
                 title={file?.originalName} 
                 className="w-full h-full border-0" 
               />
