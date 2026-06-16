@@ -18,7 +18,21 @@ const PORT = process.env.PORT || 4000;
 
 app.use(helmet());
 app.use(cors({
-  origin: 'http://localhost:5173', // Vite default
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow localhost, any Vercel preview URL, or a specific FRONTEND_URL from env
+    if (
+      origin.startsWith('http://localhost') || 
+      origin.endsWith('vercel.app') || 
+      origin === process.env.FRONTEND_URL
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 app.use(morgan('dev'));
