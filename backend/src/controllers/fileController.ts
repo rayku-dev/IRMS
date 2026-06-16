@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma.js';
-import { bucket } from '../utils/firebase.js';
+import { supabase } from '../utils/supabase.js';
 
 export const uploadFile = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -17,26 +17,28 @@ export const uploadFile = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Generate unique filename for Firebase
-    const firebaseFilename = `${Date.now()}-${req.file.originalname}`;
-    const fileUpload = bucket.file(firebaseFilename);
+    // Generate unique filename for Supabase (sanitize name)
+    const sanitizedOriginalName = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const supabaseFilename = `${Date.now()}-${sanitizedOriginalName}`;
 
-    // Upload the buffer to Firebase Storage
-    await fileUpload.save(req.file.buffer, {
-      contentType: req.file.mimetype,
-      metadata: {
-        metadata: {
-          originalName: req.file.originalname,
-        }
-      }
-    });
+    // Upload the buffer to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('irms-files')
+      .upload(supabaseFilename, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: false
+      });
+
+    if (uploadError) {
+      throw uploadError;
+    }
 
     // Save metadata to database
     const file = await prisma.file.create({
       data: {
         filename: req.file.originalname,
         title: title || req.file.originalname,
-        path: firebaseFilename, 
+        path: supabaseFilename, 
         mimetype: req.file.mimetype,
         size: req.file.size,
         userId,
@@ -99,13 +101,12 @@ export const deleteFile = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Delete from Firebase
+    // Delete from Supabase
     try {
-      await bucket.file(file.path).delete();
+      const { error } = await supabase.storage.from('irms-files').remove([file.path]);
+      if (error) throw error;
     } catch (err: any) {
-      if (err.code !== 404) {
-        console.error('Firebase delete error:', err);
-      }
+      console.error('Supabase delete error:', err);
     }
 
     // Delete from db
@@ -127,14 +128,12 @@ export const downloadFile = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    // Generate signed URL
-    const [url] = await bucket.file(file.path).getSignedUrl({
-      action: 'read',
-      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
-      responseDisposition: `attachment; filename="${file.filename}"`
+    // Generate public download URL
+    const { data } = supabase.storage.from('irms-files').getPublicUrl(file.path, {
+      download: file.filename,
     });
 
-    res.redirect(url);
+    res.redirect(data.publicUrl);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -172,13 +171,10 @@ export const getPublicLink = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // Generate signed URL for public preview without attachment disposition
-    const [url] = await bucket.file(file.path).getSignedUrl({
-      action: 'read',
-      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
-    });
+    // Generate public URL for preview
+    const { data } = supabase.storage.from('irms-files').getPublicUrl(file.path);
 
-    res.json({ url });
+    res.json({ url: data.publicUrl });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
