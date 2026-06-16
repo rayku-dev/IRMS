@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../utils/prisma.js';
 import fs from 'fs';
 import path from 'path';
+import jwt from 'jsonwebtoken';
 
 export const uploadFile = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -57,7 +58,18 @@ export const getFiles = async (req: Request, res: Response): Promise<void> => {
       orderBy: { createdAt: 'desc' }
     });
 
-    res.json(files);
+    const mappedFiles = files.map(f => ({
+      id: f.id,
+      originalName: f.filename,
+      fileName: f.path,
+      mimeType: f.mimetype,
+      size: f.size,
+      folderId: f.folderId || '',
+      uploadedBy: f.uploadedBy?.username || 'Unknown',
+      createdAt: f.createdAt,
+    }));
+
+    res.json(mappedFiles);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -129,5 +141,65 @@ export const moveFile = async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     console.error('Move error:', error);
     res.status(500).json({ message: 'Move failed' });
+  }
+};
+
+export const getPublicLink = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const file = await prisma.file.findUnique({ where: { id } });
+
+    if (!file) {
+      res.status(404).json({ message: 'File not found' });
+      return;
+    }
+
+    const token = jwt.sign(
+      { fileId: file.id },
+      process.env.JWT_SECRET || 'secret',
+      { expiresIn: '15m' }
+    );
+
+    const baseUrl = process.env.API_URL || `${req.protocol}://${req.get('host')}`;
+    const publicUrl = `${baseUrl}/api/files/public/${token}`;
+
+    res.json({ url: publicUrl });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const downloadPublicFile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token } = req.params;
+    
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    } catch (err) {
+      res.status(401).json({ message: 'Link expired or invalid' });
+      return;
+    }
+
+    const file = await prisma.file.findUnique({ where: { id: decoded.fileId } });
+    if (!file) {
+      res.status(404).json({ message: 'File not found' });
+      return;
+    }
+
+    const filePath = path.join(process.cwd(), 'uploads', file.path);
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ message: 'File not found on disk' });
+      return;
+    }
+
+    res.sendFile(filePath, {
+      headers: {
+        'Content-Type': file.mimetype,
+        'Content-Disposition': `inline; filename="${file.filename}"`
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
   }
 };

@@ -46,3 +46,13 @@ export const downloadFile = async (id: string, originalName: string) => {
   link.click();
   link.remove();
 };
+
+export const getFileBlob = async (id: string, mimeType: string): Promise<Blob> => {
+  const response = await api.get(`/files/download/${id}`, { responseType: 'blob' });
+  return new Blob([response.data], { type: mimeType });
+};
+
+export const getPublicLink = async (id: string): Promise<string> => {
+  const response = await api.get(`/files/${id}/public-link`);
+  return response.data.url;
+};

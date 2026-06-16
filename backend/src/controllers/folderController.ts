@@ -9,6 +9,33 @@ const CreateFolderSchema = z.object({
   parentId: z.string().uuid().optional().nullable(),
 });
 
+export const getFolders = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const sectionId = req.query.sectionId as string;
+    const parentId = req.query.parentId as string | undefined;
+
+    if (!sectionId) {
+      res.status(400).json({ message: 'sectionId is required' });
+      return;
+    }
+
+    const where: any = { sectionId };
+    
+    if (parentId !== undefined) {
+      where.parentId = parentId === 'null' ? null : parentId;
+    }
+
+    const folders = await prisma.folder.findMany({
+      where,
+      orderBy: { order: 'asc' }
+    });
+
+    res.json(folders);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export const createFolder = async (req: Request, res: Response): Promise<void> => {
   try {
     const parsed = CreateFolderSchema.safeParse(req.body);

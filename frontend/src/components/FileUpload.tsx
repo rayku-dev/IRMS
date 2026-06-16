@@ -1,5 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { uploadFile } from '../services/fileService';
+import { useAuth } from '../contexts/AuthContext';
+import { useRecentActivity } from '../contexts/RecentActivityContext';
 import { Button } from '@/components/ui/button';
 import { Upload } from 'lucide-react';
 import { toast } from 'sonner';
@@ -10,6 +12,8 @@ interface FileUploadProps {
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({ folderId, onUploadSuccess }) => {
+  const { user } = useAuth();
+  const { addActivity } = useRecentActivity();
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -22,6 +26,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ folderId, onUploadSuccess }) =>
     try {
       await uploadFile(folderId, file);
       toast.success('File uploaded successfully');
+      addActivity({
+        action: 'Uploaded file',
+        description: `File "${file.name}" was uploaded`,
+        type: 'add',
+        user: user?.username
+      });
       onUploadSuccess();
     } catch (error: any) {
       toast.error(error.message || 'Upload failed');

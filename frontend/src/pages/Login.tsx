@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useRecentActivity } from '../contexts/RecentActivityContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +13,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login, isAuthenticated } = useAuth();
+  const { addActivity } = useRecentActivity();
   const navigate = useNavigate();
 
   if (isAuthenticated) {
@@ -26,6 +28,12 @@ const Login = () => {
     try {
       const success = await login(username, password);
       if (success) {
+        addActivity({
+          action: 'User logged in',
+          description: `User "${username}" logged in`,
+          type: 'system',
+          user: username
+        });
         navigate('/');
       }
     } catch (err: any) {

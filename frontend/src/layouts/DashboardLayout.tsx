@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useRecentActivity } from '../contexts/RecentActivityContext';
 import { 
   LogOut, 
   Home, 
@@ -37,6 +38,7 @@ const DarkModeToggle = () => {
 
 const DashboardLayout = () => {
   const { user, logout } = useAuth();
+  const { addActivity } = useRecentActivity();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -50,6 +52,14 @@ const DashboardLayout = () => {
   }, [user, navigate]);
 
   const handleLogout = async () => {
+    if (user) {
+      await addActivity({
+        action: 'User logged out',
+        description: `User "${user.username}" logged out`,
+        type: 'system',
+        user: user.username
+      });
+    }
     await logout();
   };
 

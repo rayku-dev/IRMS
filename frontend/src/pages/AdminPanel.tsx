@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useRecentActivity } from '../contexts/RecentActivityContext';
 import { UserPlus, Users, Trash2, Shield, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ import { Navigate } from 'react-router-dom';
 
 const AdminPanel: React.FC = () => {
   const { user, users, registerUser, deleteUser } = useAuth();
+  const { addActivity } = useRecentActivity();
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
@@ -43,6 +45,12 @@ const AdminPanel: React.FC = () => {
       const result = await registerUser(formData.username, formData.password, formData.role);
       if (result) {
         toast.success('User registered successfully!');
+        addActivity({
+          action: 'Registered user',
+          description: `User "${formData.username}" was registered`,
+          type: 'add',
+          user: user?.username
+        });
         setFormData({ username: '', password: '', role: 'user' });
         setShowForm(false);
       }
@@ -58,6 +66,12 @@ const AdminPanel: React.FC = () => {
       try {
         await deleteUser(userId);
         toast.success(`User "${username}" deleted successfully`);
+        addActivity({
+          action: 'Deleted user',
+          description: `User "${username}" was deleted`,
+          type: 'delete',
+          user: user?.username
+        });
       } catch (err: any) {
         toast.error(err.message || 'Failed to delete user');
       }

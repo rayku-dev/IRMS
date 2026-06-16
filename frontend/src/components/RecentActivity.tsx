@@ -35,10 +35,11 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ activities, maxItems = 
     }
   };
 
-  const formatTimeAgo = (timestamp?: Date) => {
+  const formatTimeAgo = (timestamp?: Date | string) => {
     if (!timestamp) return 'Just now';
+    const time = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
     const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - timestamp.getTime()) / (1000 * 60));
+    const diffInMinutes = Math.floor((now.getTime() - time.getTime()) / (1000 * 60));
     
     if (diffInMinutes < 1) return 'Just now';
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;

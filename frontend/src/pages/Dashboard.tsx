@@ -135,6 +135,12 @@ const Dashboard: React.FC = () => {
     try {
       await updateSection(sectionId, data);
       toast.success('Section renamed');
+      addActivity({
+        action: 'Renamed section',
+        description: `Section renamed to "${data.name || 'new name'}"`,
+        type: 'edit',
+        user: user?.username
+      });
       await fetchSections();
     } catch (err: any) {
       toast.error(err.message || 'Error renaming section');
@@ -153,6 +159,12 @@ const Dashboard: React.FC = () => {
     try {
       await deleteSection(sectionToDelete.id);
       toast.success('Section deleted');
+      addActivity({
+        action: 'Deleted section',
+        description: `Section "${sectionToDelete.name}" was deleted`,
+        type: 'delete',
+        user: user?.username
+      });
       await fetchSections();
       setShowDeleteModal(false);
       setSectionToDelete(null);

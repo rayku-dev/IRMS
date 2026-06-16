@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { getFiles, deleteFile, downloadFile, type FileData } from '../services/fileService';
+import { useAuth } from '../contexts/AuthContext';
+import { useRecentActivity } from '../contexts/RecentActivityContext';
 import { Button } from '@/components/ui/button';
-import { Trash2, Download, FileText, CornerUpRight } from 'lucide-react';
+import { Trash2, Download, FileText, CornerUpRight, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import FileStats from './FileStats';
 import MoveFileDialog from './modals/MoveFileDialog';
+import FileViewerModal from './modals/FileViewerModal';
 
 interface FileListProps {
   folderId: string;
@@ -13,11 +16,16 @@ interface FileListProps {
 }
 
 const FileList: React.FC<FileListProps> = ({ folderId, onFileCountChange }) => {
+  const { user } = useAuth();
+  const { addActivity } = useRecentActivity();
   const [files, setFiles] = useState<FileData[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [moveFileModalOpen, setMoveFileModalOpen] = useState(false);
   const [fileToMove, setFileToMove] = useState<FileData | null>(null);
+  
+  const [viewerModalOpen, setViewerModalOpen] = useState(false);
+  const [fileToView, setFileToView] = useState<FileData | null>(null);
 
   const fetchFiles = async () => {
     try {
@@ -41,6 +49,12 @@ const FileList: React.FC<FileListProps> = ({ folderId, onFileCountChange }) => {
     try {
       await deleteFile(id);
       toast.success('File deleted');
+      addActivity({
+        action: 'Deleted file',
+        description: 'A file was deleted',
+        type: 'delete',
+        user: user?.username
+      });
       fetchFiles();
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete file');
@@ -85,9 +99,16 @@ const FileList: React.FC<FileListProps> = ({ folderId, onFileCountChange }) => {
                     {file.originalName}
                   </td>
                   <td className="px-6 py-4">{(file.size / 1024).toFixed(2)} KB</td>
-                  <td className="px-6 py-4">{file.uploadedBy}</td>
-                  <td className="px-6 py-4">{new Date(file.createdAt).toLocaleDateString()}</td>
+                  <td className="px-6 py-4">
+                    {typeof file.uploadedBy === 'object' && file.uploadedBy !== null 
+                      ? (file.uploadedBy as any).username 
+                      : (file.uploadedBy || 'Unknown')}
+                  </td>
+                  <td className="px-6 py-4">{file.createdAt ? new Date(file.createdAt).toLocaleDateString() : 'Unknown'}</td>
                   <td className="px-6 py-4 text-right space-x-2">
+                    <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10 hover:text-primary" onClick={() => { setFileToView(file); setViewerModalOpen(true); }}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => handleDownload(file.id, file.originalName)}>
                       <Download className="h-4 w-4" />
                     </Button>
@@ -114,8 +135,24 @@ const FileList: React.FC<FileListProps> = ({ folderId, onFileCountChange }) => {
           const { moveFile } = await import('../services/fileService');
           await moveFile(fId, newFolderId);
           toast.success('File moved successfully');
+          addActivity({
+            action: 'Moved file',
+            description: `File "${fileToMove?.originalName || 'unknown'}" was moved`,
+            type: 'edit',
+            user: user?.username
+          });
           fetchFiles();
         }}
+      />
+      
+      <FileViewerModal 
+        isOpen={viewerModalOpen}
+        onClose={() => {
+          setViewerModalOpen(false);
+          // Small timeout to allow animation to complete before clearing file
+          setTimeout(() => setFileToView(null), 300);
+        }}
+        file={fileToView}
       />
     </div>
   );

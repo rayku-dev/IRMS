@@ -19,10 +19,12 @@ const PageLoader = () => (
 import { AuthProvider } from './contexts/AuthContext';
 import { RecentActivityProvider } from './contexts/RecentActivityContext';
 import { Toaster } from '@/components/ui/sonner';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   return (
-    <AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
       <RecentActivityProvider>
         <Suspense fallback={<PageLoader />}>
           <Routes>
@@ -50,6 +52,7 @@ function App() {
         <Toaster />
       </RecentActivityProvider>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -53,7 +53,7 @@ const FolderView: React.FC = () => {
   const fetchFoldersData = useCallback(async (sectionId: string, parentId?: string) => {
     setLoading(true);
     try {
-      const data = await getAllFolders(sectionId, parentId, 1, 100);
+      const data = await getAllFolders(sectionId, parentId || 'null', 1, 100);
       setFolders(data.folders || data);
     } catch (error: any) {
       toast.error(error.message || 'Error fetching folders');

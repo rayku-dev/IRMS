@@ -22,7 +22,7 @@ const FileStats: React.FC<FileStatsProps> = ({ files }) => {
     };
 
     files.forEach((file) => {
-      const mime = file.mimeType.toLowerCase();
+      const mime = (file.mimeType || (file as any).mimetype || '').toLowerCase();
       if (mime.includes('image/')) {
         stats.images.count++;
         stats.images.size += file.size;

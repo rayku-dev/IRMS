@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { getAuditLogs, createAuditLog } from '../services/auditService';
+import { useAuth } from './AuthContext';
 
 export interface Activity {
   id?: string;
@@ -6,7 +8,7 @@ export interface Activity {
   description: string;
   type: 'add' | 'edit' | 'delete' | 'system';
   user?: string;
-  timestamp?: Date;
+  timestamp?: Date | string;
 }
 
 interface RecentActivityContextType {
@@ -26,9 +28,38 @@ export const useRecentActivity = () => {
 
 export const RecentActivityProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [activities, setActivities] = useState<Activity[]>([]);
+  const { isAuthenticated } = useAuth();
 
-  const addActivity = (activity: Activity) => {
-    setActivities((prev) => [{ ...activity, timestamp: new Date(), id: Math.random().toString() }, ...prev].slice(0, 50));
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const fetchActivities = async () => {
+      try {
+        const data = await getAuditLogs();
+        setActivities(data);
+      } catch (error) {
+        console.error('Failed to fetch recent activities:', error);
+      }
+    };
+    fetchActivities();
+  }, [isAuthenticated]);
+
+  const addActivity = async (activity: Activity) => {
+    // Optimistic UI update
+    const optimisticActivity = { ...activity, timestamp: new Date(), id: Math.random().toString() };
+    setActivities((prev) => [optimisticActivity, ...prev].slice(0, 50));
+    
+    try {
+      // Save to backend
+      const savedActivity = await createAuditLog(activity);
+      // Update with real ID from backend
+      setActivities((prev) => 
+        prev.map(a => a.id === optimisticActivity.id ? savedActivity : a)
+      );
+    } catch (error) {
+      console.error('Failed to save activity:', error);
+      // Revert optimistic update on failure
+      setActivities((prev) => prev.filter(a => a.id !== optimisticActivity.id));
+    }
   };
 
   return (
