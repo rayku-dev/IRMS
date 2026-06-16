@@ -6,7 +6,7 @@ export interface AuditLogData {
   description: string;
   type: 'add' | 'edit' | 'delete' | 'system';
   user?: string;
-  timestamp?: Date;
+  timestamp?: Date | string;
 }
 
 export const getAuditLogs = async (): Promise<AuditLogData[]> => {
