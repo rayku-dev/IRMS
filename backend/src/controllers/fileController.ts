@@ -1,10 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma.js';
-import fs from 'fs';
-import path from 'path';
-import jwt from 'jsonwebtoken';
-
-const UPLOAD_DIR = process.env.VERCEL ? path.join('/tmp', 'uploads') : path.join(process.cwd(), 'uploads');
+import { bucket } from '../utils/firebase.js';
 
 export const uploadFile = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -21,11 +17,26 @@ export const uploadFile = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
+    // Generate unique filename for Firebase
+    const firebaseFilename = `${Date.now()}-${req.file.originalname}`;
+    const fileUpload = bucket.file(firebaseFilename);
+
+    // Upload the buffer to Firebase Storage
+    await fileUpload.save(req.file.buffer, {
+      contentType: req.file.mimetype,
+      metadata: {
+        metadata: {
+          originalName: req.file.originalname,
+        }
+      }
+    });
+
+    // Save metadata to database
     const file = await prisma.file.create({
       data: {
         filename: req.file.originalname,
         title: title || req.file.originalname,
-        path: req.file.filename, // Saved as hashed name
+        path: firebaseFilename, 
         mimetype: req.file.mimetype,
         size: req.file.size,
         userId,
@@ -39,6 +50,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<void> => 
 
     res.status(201).json(file);
   } catch (error) {
+    console.error('Upload error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -87,10 +99,13 @@ export const deleteFile = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Delete from disk
-    const filePath = path.join(UPLOAD_DIR, file.path);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    // Delete from Firebase
+    try {
+      await bucket.file(file.path).delete();
+    } catch (err: any) {
+      if (err.code !== 404) {
+        console.error('Firebase delete error:', err);
+      }
     }
 
     // Delete from db
@@ -112,13 +127,14 @@ export const downloadFile = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const filePath = path.join(UPLOAD_DIR, file.path);
-    if (!fs.existsSync(filePath)) {
-      res.status(404).json({ message: 'File not found on disk' });
-      return;
-    }
+    // Generate signed URL
+    const [url] = await bucket.file(file.path).getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+      responseDisposition: `attachment; filename="${file.filename}"`
+    });
 
-    res.download(filePath, file.filename);
+    res.redirect(url);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -156,52 +172,19 @@ export const getPublicLink = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const token = jwt.sign(
-      { fileId: file.id },
-      process.env.JWT_SECRET || 'secret',
-      { expiresIn: '15m' }
-    );
+    // Generate signed URL for public preview without attachment disposition
+    const [url] = await bucket.file(file.path).getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+    });
 
-    const baseUrl = process.env.API_URL || `${req.protocol}://${req.get('host')}`;
-    const publicUrl = `${baseUrl}/api/files/public/${token}`;
-
-    res.json({ url: publicUrl });
+    res.json({ url });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
 };
 
 export const downloadPublicFile = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { token } = req.params;
-    
-    let decoded: any;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
-    } catch (err) {
-      res.status(401).json({ message: 'Link expired or invalid' });
-      return;
-    }
-
-    const file = await prisma.file.findUnique({ where: { id: decoded.fileId } });
-    if (!file) {
-      res.status(404).json({ message: 'File not found' });
-      return;
-    }
-
-    const filePath = path.join(UPLOAD_DIR, file.path);
-    if (!fs.existsSync(filePath)) {
-      res.status(404).json({ message: 'File not found on disk' });
-      return;
-    }
-
-    res.sendFile(filePath, {
-      headers: {
-        'Content-Type': file.mimetype,
-        'Content-Disposition': `inline; filename="${file.filename}"`
-      }
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error' });
-  }
+  // Deprecated now that getPublicLink directly returns Firebase URL
+  res.status(404).json({ message: 'Deprecated endpoint. Use getPublicLink.' });
 };
