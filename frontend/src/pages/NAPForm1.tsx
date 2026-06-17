@@ -1,31 +1,53 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, FileSpreadsheet } from 'lucide-react';
+import { Download, FileSpreadsheet, Upload } from 'lucide-react';
 import { toast } from 'sonner';
-
+import { api } from '@/lib/api';
+import { useAuth } from '../contexts/AuthContext';
 const NAPForm1: React.FC = () => {
-  const handleGenerateTemplate = () => {
+  const { user } = useAuth();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleReplaceTemplate = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
     try {
-      // Create a mock CSV content for NAP Form 1
-      const csvContent = "data:text/csv;charset=utf-8," 
-        + "National Archives of the Philippines - Form 1\n"
-        + "Agency/Office, Date, Prepared By\n"
-        + "Record Series, Description, Retention Period, Remarks\n"
-        + ",,,\n";
-
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", "NAP_Form_1_Template.csv");
-      document.body.appendChild(link);
+      const formData = new FormData();
+      formData.append('file', file);
       
-      link.click();
-      document.body.removeChild(link);
-
-      toast.success('Template downloaded successfully');
+      await api.post('/files/template/nap-form-1', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      
+      toast.success('Template replaced successfully');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     } catch (error) {
-      toast.error('Failed to generate template');
+      toast.error('Failed to replace template');
+      console.error(error);
+    }
+  };
+  const handleDownloadStatic = async () => {
+    try {
+      const response = await api.get('/files/template/nap-form-1', {
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'NAP-Form-No.-1-Template.xls');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Static template downloaded successfully');
+    } catch (error) {
+      toast.error('Failed to download static template');
       console.error(error);
     }
   };
@@ -56,23 +78,32 @@ const NAPForm1: React.FC = () => {
             <Button 
               size="lg" 
               className="gap-2 w-full sm:w-auto"
-              onClick={handleGenerateTemplate}
+              onClick={handleDownloadStatic}
             >
               <Download className="h-5 w-5" />
-              Generate CSV Template
+              Download Form 1 Template
             </Button>
             
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="gap-2 w-full sm:w-auto"
-              onClick={() => {
-                toast.info("Static template currently unavailable in v2. Please use Generate.");
-              }}
-            >
-              <FileSpreadsheet className="h-5 w-5" />
-              Download Static Excel
-            </Button>
+            {user?.role === 'admin' && (
+              <>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  hidden 
+                  accept=".xls,.xlsx" 
+                  onChange={handleReplaceTemplate} 
+                />
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  className="gap-2 w-full sm:w-auto"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="h-5 w-5" />
+                  Replace Template
+                </Button>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>

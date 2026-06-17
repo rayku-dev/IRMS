@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma.js';
 import { supabase } from '../utils/supabase.js';
-
+import path from 'path';
+import fs from 'fs/promises';
 export const uploadFile = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.file) {
@@ -183,4 +184,61 @@ export const getPublicLink = async (req: Request, res: Response): Promise<void> 
 export const downloadPublicFile = async (req: Request, res: Response): Promise<void> => {
   // Deprecated now that getPublicLink directly returns Firebase URL
   res.status(404).json({ message: 'Deprecated endpoint. Use getPublicLink.' });
+};
+
+export const downloadTemplate = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name } = req.params;
+    
+    let filename = '';
+    if (name === 'nap-form-1') {
+      filename = 'NAP-Form-No.-1-Template.xls';
+    } else {
+      res.status(404).json({ message: 'Template not found' });
+      return;
+    }
+
+    // Since the project is run with ts-node or compiled to dist, it's safer to resolve from process.cwd() or __dirname
+    const filePath = path.resolve(process.cwd(), 'src', 'template', filename);
+    
+    res.download(filePath, filename, (err) => {
+      if (err) {
+        console.error('Template download error:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ message: 'Error downloading template' });
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Server error during template download:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const uploadTemplate = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name } = req.params;
+    
+    // Note: check role if you have it in user object, otherwise assume authorize middleware handles it
+    if (!req.file) {
+      res.status(400).json({ message: 'No file uploaded' });
+      return;
+    }
+
+    let filename = '';
+    if (name === 'nap-form-1') {
+      filename = 'NAP-Form-No.-1-Template.xls';
+    } else {
+      res.status(404).json({ message: 'Template not found' });
+      return;
+    }
+
+    const filePath = path.resolve(process.cwd(), 'src', 'template', filename);
+    await fs.writeFile(filePath, req.file.buffer);
+
+    res.json({ message: 'Template updated successfully' });
+  } catch (error) {
+    console.error('Upload template error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
