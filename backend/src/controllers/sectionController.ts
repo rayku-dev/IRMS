@@ -246,3 +246,89 @@ export const deleteSection = async (req: Request, res: Response): Promise<void> 
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+export const createSectionType = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name } = req.body;
+    if (!name) {
+      res.status(400).json({ message: 'Name is required' });
+      return;
+    }
+
+    const existing = await prisma.sectionType.findFirst({
+      where: { name }
+    });
+
+    if (existing) {
+      res.status(400).json({ message: 'Section type with this name already exists' });
+      return;
+    }
+
+    const type = await prisma.sectionType.create({
+      data: { name }
+    });
+
+    res.status(201).json(type);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const updateSectionType = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+
+    const existing = await prisma.sectionType.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ message: 'Section type not found' });
+      return;
+    }
+
+    if (name && name !== existing.name) {
+      const duplicate = await prisma.sectionType.findFirst({
+        where: { name, id: { not: id } }
+      });
+      if (duplicate) {
+        res.status(400).json({ message: 'Section type with this name already exists' });
+        return;
+      }
+    }
+
+    const updated = await prisma.sectionType.update({
+      where: { id },
+      data: { name }
+    });
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const deleteSectionType = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const existing = await prisma.sectionType.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ message: 'Section type not found' });
+      return;
+    }
+
+    const sectionCount = await prisma.section.count({
+      where: { typeId: id }
+    });
+
+    if (sectionCount > 0) {
+      res.status(400).json({ message: 'Cannot delete section type because it is in use by one or more sections.' });
+      return;
+    }
+
+    await prisma.sectionType.delete({ where: { id } });
+
+    res.json({ message: 'Section type deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};

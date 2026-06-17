@@ -30,6 +30,20 @@ export const getSectionTypes = async () => {
   return response.data;
 };
 
+export const createSectionType = async (typeData: { name: string }) => {
+  const response = await api.post('/sections/types', typeData);
+  return response.data;
+};
+
+export const updateSectionType = async (id: string, typeData: { name: string }) => {
+  const response = await api.put(`/sections/types/${id}`, typeData);
+  return response.data;
+};
+
+export const deleteSectionType = async (id: string): Promise<void> => {
+  await api.delete(`/sections/types/${id}`);
+};
+
 export const deleteSection = async (id: string): Promise<void> => {
   await api.delete(`/sections/${id}`);
 };

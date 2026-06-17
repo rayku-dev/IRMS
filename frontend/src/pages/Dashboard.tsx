@@ -105,11 +105,11 @@ const Dashboard: React.FC = () => {
     fetchSections();
   }, [fetchSections]);
 
-  const handleAddSection = async (sectionData: { name: string; icon: string; path: string; typeId: string; }) => {
+  const handleAddSection = async (sectionData: { name: string; description: string; icon: string; path: string; typeId: string; }) => {
     try {
       const newSection = {
         name: sectionData.name,
-        description: 'Custom section for organizing your records and folders.',
+        description: sectionData.description || 'Custom section for organizing your records and folders.',
         typeId: sectionData.typeId,
         icon: sectionData.icon,
         active: true
@@ -131,7 +131,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleRenameSection = async (sectionId: string, data: { name: string; description?: string }) => {
+  const handleRenameSection = async (sectionId: string, data: { name: string; description?: string; icon?: string; typeId?: string }) => {
     try {
       await updateSection(sectionId, data);
       toast.success('Section renamed');

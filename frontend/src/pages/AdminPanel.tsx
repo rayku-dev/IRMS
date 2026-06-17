@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Navigate } from 'react-router-dom';
+import SectionTypeManager from '../components/SectionTypeManager';
 
 const AdminPanel: React.FC = () => {
   const { user, users, registerUser, deleteUser } = useAuth();
@@ -260,6 +261,8 @@ const AdminPanel: React.FC = () => {
           </table>
         </div>
       </Card>
+
+      <SectionTypeManager />
     </div>
   );
 };

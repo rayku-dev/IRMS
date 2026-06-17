@@ -16,11 +16,12 @@ import { getSectionTypes } from '../../services/sectionService';
 interface AddSectionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (section: { name: string; icon: string; path: string; typeId: string }) => Promise<void>;
+  onAdd: (section: { name: string; description: string; icon: string; path: string; typeId: string }) => Promise<void>;
 }
 
 const AddSectionModal: React.FC<AddSectionModalProps> = ({ isOpen, onClose, onAdd }) => {
   const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
   const [icon, setIcon] = useState('Archive');
   const [typeId, setTypeId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,6 +30,7 @@ const AddSectionModal: React.FC<AddSectionModalProps> = ({ isOpen, onClose, onAd
   useEffect(() => {
     if (isOpen) {
       setName('');
+      setDescription('');
       setIcon('Archive');
       setTypeId('');
       fetchTypes();
@@ -55,7 +57,7 @@ const AddSectionModal: React.FC<AddSectionModalProps> = ({ isOpen, onClose, onAd
     try {
       // Create a slug from the name
       const path = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-      await onAdd({ name, icon, path, typeId });
+      await onAdd({ name, description, icon, path, typeId });
       onClose();
     } catch (error) {
       console.error(error);
@@ -83,6 +85,15 @@ const AddSectionModal: React.FC<AddSectionModalProps> = ({ isOpen, onClose, onAd
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. HR Department"
                 required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Input
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="e.g. For storing employee records"
               />
             </div>
             <div className="grid gap-2">

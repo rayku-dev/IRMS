@@ -10,13 +10,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { type Section } from '../../services/sectionService';
+import { type Section, getSectionTypes } from '../../services/sectionService';
 import IconPicker from '../IconPicker';
 
 interface RenameSectionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onRename: (id: string, data: { name: string; description?: string; icon?: string }) => Promise<void>;
+  onRename: (id: string, data: { name: string; description?: string; icon?: string; typeId?: string }) => Promise<void>;
   section: Section | null;
 }
 
@@ -25,14 +25,30 @@ const RenameSectionModal: React.FC<RenameSectionModalProps> = ({ isOpen, onClose
   const [description, setDescription] = useState('');
   const [icon, setIcon] = useState('Archive');
   const [loading, setLoading] = useState(false);
+  const [typeId, setTypeId] = useState('');
+  const [types, setTypes] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchTypes();
+  }, []);
+
+  const fetchTypes = async () => {
+    try {
+      const data = await getSectionTypes();
+      setTypes(data);
+    } catch (error) {
+      console.error('Failed to load types:', error);
+    }
+  };
 
   useEffect(() => {
     if (section && isOpen) {
       setName(section.name || '');
       setDescription(section.description || '');
       setIcon(section.icon || 'Archive');
+      setTypeId(section.typeId || (types.length > 0 ? types[0].id : ''));
     }
-  }, [section, isOpen]);
+  }, [section, isOpen, types]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +56,7 @@ const RenameSectionModal: React.FC<RenameSectionModalProps> = ({ isOpen, onClose
     
     setLoading(true);
     try {
-      await onRename(section.id, { name, description, icon });
+      await onRename(section.id, { name, description, icon, typeId });
       onClose();
     } catch (error) {
       console.error(error);
@@ -76,6 +92,21 @@ const RenameSectionModal: React.FC<RenameSectionModalProps> = ({ isOpen, onClose
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-typeId">Section Type</Label>
+              <select
+                id="edit-typeId"
+                value={typeId}
+                onChange={(e) => setTypeId(e.target.value)}
+                className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                {types.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="grid gap-2">
               <Label>Icon</Label>
