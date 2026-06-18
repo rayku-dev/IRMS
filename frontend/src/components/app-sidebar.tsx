@@ -19,6 +19,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarGroup,
+  SidebarGroupLabel,
 } from "./ui/sidebar"
 import { useAuth } from "../contexts/AuthContext"
 
@@ -43,28 +45,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: "/nap-form-1",
       icon: FileSpreadsheet,
     },
-    ...(isAdmin ? [{
-      title: "Admin Panel",
-      url: "/admin",
-      icon: Settings,
-      items: [
-        {
-          title: "User",
-          url: "/admin/users",
-          icon: Users,
-        },
-        {
-          title: "Section Type",
-          url: "/admin/section-types",
-          icon: Layers,
-        },
-        {
-          title: "Approvals",
-          url: "/admin/approvals",
-          icon: ShieldCheck,
-        }
-      ]
-    }] : [])
+  ]
+
+  const adminItems = [
+    {
+      title: "User",
+      url: "/admin/users",
+      icon: Users,
+    },
+    {
+      title: "Section Type",
+      url: "/admin/section-types",
+      icon: Layers,
+    },
+    {
+      title: "Approvals",
+      url: "/admin/approvals",
+      icon: ShieldCheck,
+    }
   ]
 
   return (
@@ -88,6 +86,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMain} />
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Admin Panel</SidebarGroupLabel>
+            <SidebarMenu>
+              {adminItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild tooltip={item.title}>
+                    <a href={item.url}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
       </SidebarContent>
       <SidebarFooter>
         <NavUser />

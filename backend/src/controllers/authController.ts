@@ -4,6 +4,7 @@ import prisma from '../utils/prisma.js';
 import { generateAccessToken, generateRefreshToken, generateCsrfToken } from '../utils/auth.js';
 import { LoginSchema, RegisterSchema } from '../schemas/index.js';
 import jwt from 'jsonwebtoken';
+import { logAuditAction } from '../services/auditService.js';
 
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'fallback-refresh-secret';
 
@@ -32,6 +33,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         role: 'user',
       },
     });
+
+    await logAuditAction(req, 'add', 'User registered', user.id, `User "${user.username}" registered`, user.id);
 
     res.status(201).json({ message: 'User created successfully', userId: user.id });
   } catch (error) {
@@ -75,6 +78,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     });
 
     // We send CSRF token and Access token to frontend
+    await logAuditAction(req, 'system', 'User login', user.id, `User "${user.username}" logged in`, user.id);
+
     res.json({
       accessToken,
       csrfToken,
@@ -119,11 +124,14 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const logout = (req: Request, res: Response): void => {
+export const logout = async (req: Request, res: Response): Promise<void> => {
   res.clearCookie('refreshToken', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
   });
+  
+  await logAuditAction(req, 'system', 'User logout', null, 'User logged out');
+  
   res.json({ message: 'Logged out successfully' });
 };

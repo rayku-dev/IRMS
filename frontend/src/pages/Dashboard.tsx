@@ -4,10 +4,11 @@ import {
   BarChart3,
   RefreshCw,
 } from 'lucide-react';
-import { getStatistics } from '../services/statisticsService';
+import { getStatistics, getAuditStats } from '../services/statisticsService';
 import RecentActivity from '../components/RecentActivity';
 import { useRecentActivity } from '../contexts/RecentActivityContext';
 import { toast } from 'sonner';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 type Statistics = {
   sections: {
@@ -25,6 +26,7 @@ type Statistics = {
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const [statistics, setStatistics] = useState<Statistics | null>(null);
+  const [auditStats, setAuditStats] = useState<any>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   const { activities } = useRecentActivity();
@@ -32,8 +34,12 @@ const Dashboard: React.FC = () => {
   const fetchStatistics = async () => {
     try {
       setIsRefreshing(true);
-      const stats = await getStatistics();
+      const [stats, audit] = await Promise.all([
+        getStatistics(),
+        getAuditStats()
+      ]);
       setStatistics(stats);
+      setAuditStats(audit);
     } catch (err) {
       console.error(err);
       toast.error('Failed to load statistics');
@@ -86,13 +92,60 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <div className="lg:col-span-3">
-          <div className="bg-card rounded-xl shadow-md border p-6 min-h-[400px] flex items-center justify-center">
-             <div className="text-center text-muted-foreground">
-                <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium">Dashboard Overview</h3>
-                <p>More detailed analytics and charts will appear here.</p>
-             </div>
+        <div className="lg:col-span-3 space-y-6">
+          <div className="bg-card rounded-xl shadow-md border p-6 min-h-[350px]">
+            <h3 className="text-lg font-medium mb-4">System Activity Over Time</h3>
+            {auditStats ? (
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={auditStats.systemActivityOverTime} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorActions" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <RechartsTooltip />
+                    <Area type="monotone" dataKey="actions" stroke="#3b82f6" fillOpacity={1} fill="url(#colorActions)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground animate-pulse">Loading chart...</div>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-card rounded-xl shadow-md border p-6 min-h-[300px]">
+              <h3 className="text-lg font-medium mb-4">Action Distribution</h3>
+              {auditStats ? (
+                <div className="h-[250px] w-full flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={auditStats.actionDistribution}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {auditStats.actionDistribution.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444'][index % 5]} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-[250px] flex items-center justify-center text-muted-foreground animate-pulse">Loading chart...</div>
+              )}
+            </div>
           </div>
         </div>
 

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
-import { getPendingApprovals, approveRequest, rejectRequest, ApprovalRequest } from '../services/approvalService';
+import { getPendingApprovals, approveRequest, rejectRequest } from '../services/approvalService';
+import type { ApprovalRequest } from '../services/approvalService';
 import { toast } from 'sonner';
 import { Check, X, Clock, File, Folder, Database, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';

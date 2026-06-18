@@ -1,12 +1,10 @@
 import { Router } from 'express';
-import { getAuditLogs, createAuditLog } from '../controllers/auditController.js';
-import { authenticate } from '../middleware/authMiddleware.js';
+import { getAuditLogs, getStats } from '../controllers/auditController.js';
+import { authenticate, authorize } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
-router.use(authenticate);
-
-router.get('/', getAuditLogs);
-router.post('/', createAuditLog);
+router.get('/stats', authenticate, authorize(['admin', 'user']), getStats);
+router.get('/', authenticate, authorize(['admin']), getAuditLogs);
 
 export default router;

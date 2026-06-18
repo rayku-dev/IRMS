@@ -9,7 +9,7 @@ router.use(authenticate);
 router.get('/', getFolders);
 router.post('/', authorize(['admin']), createFolder);
 router.get('/:id', getFolderById);
-router.put('/:id', authorize(['admin']), updateFolder);
-router.delete('/:id', authorize(['admin']), deleteFolder);
+router.put('/:id', authorize(['admin', 'user']), updateFolder);
+router.delete('/:id', authorize(['admin', 'user']), deleteFolder);
 
 export default router;

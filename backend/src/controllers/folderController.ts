@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma.js';
 import { z } from 'zod';
+import { logAuditAction } from '../services/auditService.js';
 
 const CreateFolderSchema = z.object({
   name: z.string().min(1),
@@ -61,6 +62,8 @@ export const createFolder = async (req: Request, res: Response): Promise<void> =
       }
     });
 
+    await logAuditAction(req, 'add', 'Created folder', folder.id, `Created folder "${folder.name}"`);
+
     res.status(201).json(folder);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -113,6 +116,8 @@ export const updateFolder = async (req: Request, res: Response): Promise<void> =
       data: { name, description }
     });
 
+    await logAuditAction(req, 'edit', 'Updated folder', folder.id, `Updated folder "${folder.name}"`);
+
     res.json(folder);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -149,6 +154,8 @@ export const deleteFolder = async (req: Request, res: Response): Promise<void> =
     
     // Delete the folder itself
     await prisma.folder.delete({ where: { id } });
+
+    await logAuditAction(req, 'delete', 'Deleted folder', id, `Deleted folder "${folder.name}"`);
 
     res.json({ message: 'Folder deleted successfully' });
   } catch (error) {

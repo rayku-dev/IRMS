@@ -6,12 +6,13 @@ import { getAllFolders, createFolder, deleteFolder, renameFolder, type Folder as
 import { api } from '../lib/api';
 import { 
   FolderOpen, Folder, Archive, Database, Warehouse, Building2, FileText, Calendar, 
-  ChevronRight, Plus, Trash2, Edit
+  ChevronRight, Plus, Trash2, Edit, Upload as UploadIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import FileList from '../components/FileList';
 import FileUpload from '../components/FileUpload';
+import { useDropzone } from 'react-dropzone';
 
 const getFolderIcon = (folderName: string) => {
   const name = folderName.toLowerCase();
@@ -36,6 +37,19 @@ const FolderView: React.FC = () => {
   const [folders, setFolders] = useState<FolderType[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [draggedFile, setDraggedFile] = useState<File | null>(null);
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles.length > 0 && currentFolderId) {
+      setDraggedFile(acceptedFiles[0]);
+    }
+  }, [currentFolderId]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    noClick: true, // Prevent clicking anywhere from opening the file dialog
+    noKeyboard: true
+  });
 
   const fetchSectionData = useCallback(async () => {
     if (!section) return;
@@ -160,7 +174,18 @@ const FolderView: React.FC = () => {
   const isCustomSection = sectionData && !systemSectionSlugs.includes(sectionData.slug);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div {...getRootProps()} className={`space-y-6 animate-in fade-in duration-500 min-h-[500px] rounded-xl transition-all ${isDragActive ? 'bg-primary/5 ring-2 ring-primary ring-inset' : ''}`}>
+      <input {...getInputProps()} />
+      {isDragActive && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-xl border-2 border-primary border-dashed m-4">
+          <div className="text-center">
+            <UploadIcon className="h-16 w-16 text-primary mx-auto mb-4 animate-bounce" />
+            <h2 className="text-2xl font-bold text-primary">Drop file here to upload</h2>
+            <p className="text-muted-foreground mt-2">The file will be uploaded to {subsubfolder || subfolder || sectionData?.name}</p>
+          </div>
+        </div>
+      )}
+      
       {/* Header */}
       <div className="bg-card rounded-xl shadow-sm border p-6">
         <div className="flex items-center gap-2 text-muted-foreground mb-4">
@@ -222,7 +247,14 @@ const FolderView: React.FC = () => {
         <div className="mt-8 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-foreground/80">Files in {subsubfolder || subfolder}</h2>
-            <FileUpload folderId={currentFolderId} onUploadSuccess={() => fetchFoldersData(sectionData!.id, currentFolderId || undefined)} />
+            <FileUpload 
+              folderId={currentFolderId} 
+              draggedFile={draggedFile}
+              onUploadSuccess={() => {
+                setDraggedFile(null);
+                fetchFoldersData(sectionData!.id, currentFolderId || undefined);
+              }} 
+            />
           </div>
           <FileList folderId={currentFolderId} sectionId={sectionData!.id} />
         </div>

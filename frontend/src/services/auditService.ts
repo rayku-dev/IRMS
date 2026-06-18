@@ -13,8 +13,3 @@ export const getAuditLogs = async (): Promise<AuditLogData[]> => {
   const response = await api.get('/audit');
   return response.data;
 };
-
-export const createAuditLog = async (data: AuditLogData): Promise<AuditLogData> => {
-  const response = await api.post('/audit', data);
-  return response.data;
-};

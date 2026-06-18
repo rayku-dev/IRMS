@@ -31,44 +31,58 @@ export const getAuditLogs = async (req: Request, res: Response): Promise<void> =
   }
 };
 
-export const createAuditLog = async (req: Request, res: Response): Promise<void> => {
+export const getStats = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { action, description, type, user: username } = req.body;
+    // Action Distribution
+    const distribution = await prisma.auditLog.groupBy({
+      by: ['action'],
+      _count: {
+        action: true,
+      },
+    });
 
-    let userId = null;
-    if (username) {
-      const foundUser = await prisma.user.findUnique({
-        where: { username }
-      });
-      if (foundUser) {
-        userId = foundUser.id;
-      }
+    // Recent System Activity Over Time (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const recentLogs = await prisma.auditLog.findMany({
+      where: {
+        createdAt: {
+          gte: sevenDaysAgo,
+        },
+      },
+      select: {
+        createdAt: true,
+      },
+    });
+
+    const activityByDay: Record<string, number> = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      activityByDay[d.toISOString().split('T')[0]] = 0;
     }
 
-    const newLog = await prisma.auditLog.create({
-      data: {
-        action: type || 'system', // Store 'add', 'edit', etc. here
-        entity: action || 'Unknown Action', // Store "Added folder" here
-        details: { description },
-        userId: userId,
-      },
-      include: {
-        user: { select: { username: true } }
+    recentLogs.forEach((log) => {
+      const dateStr = log.createdAt.toISOString().split('T')[0];
+      if (activityByDay[dateStr] !== undefined) {
+        activityByDay[dateStr]++;
       }
     });
 
-    res.status(201).json({
-      id: newLog.id,
-      action: newLog.entity,
-      description: newLog.details && typeof newLog.details === 'object' && 'description' in newLog.details 
-        ? (newLog.details as any).description 
-        : '',
-      type: newLog.action,
-      user: newLog.user?.username || 'System',
-      timestamp: newLog.createdAt,
-    });
+    const systemActivityOverTime = Object.keys(activityByDay).map((date) => ({
+      date,
+      actions: activityByDay[date],
+    }));
+
+    const actionDistribution = distribution.map((item) => ({
+      name: item.action,
+      value: item._count.action,
+    }));
+
+    res.json({ systemActivityOverTime, actionDistribution });
   } catch (error) {
-    console.error('Error creating audit log:', error);
-    res.status(500).json({ message: 'Server error creating audit log' });
+    console.error('Error fetching audit stats:', error);
+    res.status(500).json({ message: 'Server error fetching stats' });
   }
 };

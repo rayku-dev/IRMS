@@ -13,9 +13,21 @@ import fileRoutes from './routes/fileRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import auditRoutes from './routes/auditRoutes.js';
 import approvalRoutes from './routes/approvalRoutes.js';
+import { startRetentionCron } from './jobs/retentionCron.js';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 4000;
+
+// Set up Socket.IO
+const io = new Server(httpServer, {
+  cors: {
+    origin: '*', // Adjust to specific origin in production
+    methods: ['GET', 'POST']
+  }
+});
 
 app.set('trust proxy', 1);
 app.use(helmet());
@@ -54,6 +66,57 @@ app.use('/api/users', userRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/approvals', approvalRoutes);
 
+// Start Background Jobs
+startRetentionCron();
+
+// WebSocket Events
+io.on('connection', (socket) => {
+  console.log('[Socket] User connected:', socket.id);
+
+  socket.on('join-document', (data) => {
+    const { fileId, username } = data;
+    socket.join(`doc-${fileId}`);
+    // Broadcast presence
+    socket.to(`doc-${fileId}`).emit('user-joined', { username, socketId: socket.id });
+    console.log(`[Socket] ${username} joined doc-${fileId}`);
+  });
+
+  socket.on('leave-document', (data) => {
+    const { fileId, username } = data;
+    socket.leave(`doc-${fileId}`);
+    socket.to(`doc-${fileId}`).emit('user-left', { username, socketId: socket.id });
+  });
+
+  socket.on('send-comment', async (data) => {
+    const { fileId, username, userId, content } = data;
+    try {
+      // Import prisma dynamically or use global prisma if available
+      const prisma = (await import('./utils/prisma.js')).default;
+      const comment = await prisma.comment.create({
+        data: {
+          fileId,
+          userId,
+          content
+        },
+        include: { user: true }
+      });
+      // Broadcast comment
+      io.to(`doc-${fileId}`).emit('new-comment', {
+        id: comment.id,
+        content: comment.content,
+        username: comment.user.username,
+        createdAt: comment.createdAt
+      });
+    } catch (e) {
+      console.error('[Socket] Failed to save comment', e);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('[Socket] User disconnected:', socket.id);
+  });
+});
+
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error(err.stack);
@@ -61,9 +124,9 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-  });
+  httpServer.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
 }
 
 export default app;

@@ -19,7 +19,9 @@ model User {
   updatedAt DateTime   @default(now()) @updatedAt
   deletedAt DateTime?
   files            File[]            // Relation to uploaded files
+  fileVersions     FileVersion[]     // Relation to uploaded file versions
   auditLogs        AuditLog[]        // Relation to audit logs
+  comments         Comment[]         // Relation to comments
   requestedApprovals ApprovalRequest[] @relation("RequestedApprovals")
   handledApprovals   ApprovalRequest[] @relation("HandledApprovals")
 }
@@ -91,7 +93,11 @@ model File {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @default(now()) @updatedAt
   deletedAt     DateTime?
+  retentionDate DateTime? // NAP Schedule expiration date
   metadata      Json?     // Additional metadata as JSON
+  version       Int       @default(1) // Current version number
+  versions      FileVersion[] // Relation to file history
+  comments      Comment[] // Relation to comments
 
   @@index([userId])
   @@index([sectionId])
@@ -114,6 +120,21 @@ model AuditLog {
   @@index([entity, entityId])
 }
 
+model FileVersion {
+  id            String   @id @default(uuid())
+  fileId        String
+  file          File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  path          String
+  size          Int
+  uploadedBy    User     @relation(fields: [userId], references: [id])
+  userId        String
+  createdAt     DateTime @default(now())
+
+  @@index([fileId])
+  @@index([userId])
+}
+
 model ApprovalRequest {
   id           String   @id @default(uuid())
   actionType   String   // e.g., "CREATE_FILE", "EDIT_SECTION", "DELETE_SECTION", "EDIT_FOLDER", "DELETE_FOLDER", "MOVE_FILE"
@@ -130,4 +151,18 @@ model ApprovalRequest {
 
   @@index([status])
   @@index([requesterId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  fileId    String
+  file      File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([fileId])
+  @@index([userId])
 }

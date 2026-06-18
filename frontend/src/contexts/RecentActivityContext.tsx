@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { getAuditLogs, createAuditLog } from '../services/auditService';
+import { getAuditLogs } from '../services/auditService';
 import { useAuth } from './AuthContext';
 
 export interface Activity {
@@ -44,22 +44,9 @@ export const RecentActivityProvider: React.FC<{ children: ReactNode }> = ({ chil
   }, [isAuthenticated]);
 
   const addActivity = async (activity: Activity) => {
-    // Optimistic UI update
+    // Optimistic UI update only. The backend now immutably logs actions automatically.
     const optimisticActivity = { ...activity, timestamp: new Date(), id: Math.random().toString() };
     setActivities((prev) => [optimisticActivity, ...prev].slice(0, 50));
-    
-    try {
-      // Save to backend
-      const savedActivity = await createAuditLog(activity);
-      // Update with real ID from backend
-      setActivities((prev) => 
-        prev.map(a => a.id === optimisticActivity.id ? savedActivity : a)
-      );
-    } catch (error) {
-      console.error('Failed to save activity:', error);
-      // Revert optimistic update on failure
-      setActivities((prev) => prev.filter(a => a.id !== optimisticActivity.id));
-    }
   };
 
   return (

@@ -68,6 +68,67 @@ export const approveRequest = async (req: Request, res: Response) => {
             data: payload
           });
           break;
+        case 'DELETE_FILE':
+          if (!request.entityId) throw new Error('Missing file ID');
+          // Handle Supabase file removal after transaction commits
+          const fileToDelete = await tx.file.findUnique({ where: { id: request.entityId } });
+          if (fileToDelete) {
+            postCommitTasks.push(async () => {
+              const { supabase } = await import('../utils/supabase.js');
+              await supabase.storage.from('irms-files').remove([fileToDelete.path]);
+            });
+          }
+          await tx.file.delete({ where: { id: request.entityId } });
+          await tx.auditLog.create({
+            data: {
+              userId: adminId,
+              action: 'delete',
+              entity: 'file',
+              entityId: request.entityId,
+              details: { approvedBy: adminId, requesterId: request.requesterId },
+            },
+          });
+          break;
+
+        case 'ARCHIVE_FILE':
+          if (!request.entityId) throw new Error('Missing file ID');
+          await tx.file.update({
+            where: { id: request.entityId },
+            data: { isArchived: true }
+          });
+          await tx.auditLog.create({
+            data: {
+              userId: adminId,
+              action: 'archive',
+              entity: 'file',
+              entityId: request.entityId,
+              details: { reason: 'NAP Schedule met', approvedBy: adminId, requesterId: request.requesterId },
+            },
+          });
+          break;
+
+        case 'DISPOSE_FILE':
+          if (!request.entityId) throw new Error('Missing file ID');
+          // Same logic as DELETE_FILE essentially
+          const fileToDispose = await tx.file.findUnique({ where: { id: request.entityId } });
+          if (fileToDispose) {
+            postCommitTasks.push(async () => {
+              const { supabase } = await import('../utils/supabase.js');
+              await supabase.storage.from('irms-files').remove([fileToDispose.path]);
+            });
+          }
+          await tx.file.delete({ where: { id: request.entityId } });
+          await tx.auditLog.create({
+            data: {
+              userId: adminId,
+              action: 'dispose',
+              entity: 'file',
+              entityId: request.entityId,
+              details: { reason: 'NAP Schedule met', approvedBy: adminId, requesterId: request.requesterId },
+            },
+          });
+          break;
+
         case 'EDIT_SECTION':
           await tx.section.update({
             where: { id: request.entityId! },
@@ -111,6 +172,16 @@ export const approveRequest = async (req: Request, res: Response) => {
         }
       });
     });
+
+    // Post-transaction tasks (like deleting from Supabase)
+    if (request.actionType === 'DELETE_FILE' && payload.path) {
+      const { supabase } = await import('../utils/supabase.js');
+      try {
+        await supabase.storage.from('irms-files').remove([payload.path]);
+      } catch (err) {
+        console.error('Failed to delete file from Supabase during approval:', err);
+      }
+    }
 
     res.json({ message: 'Request approved successfully' });
   } catch (error: any) {

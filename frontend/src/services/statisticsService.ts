@@ -15,3 +15,8 @@ export const getStatistics = async () => {
     timestamp: new Date().toISOString()
   };
 };
+
+export const getAuditStats = async (): Promise<any> => {
+  const response = await api.get('/audit/stats');
+  return response.data;
+};

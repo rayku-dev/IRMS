@@ -3,6 +3,8 @@ import prisma from '../utils/prisma.js';
 import { supabase } from '../utils/supabase.js';
 import path from 'path';
 import fs from 'fs/promises';
+import { logAuditAction } from '../services/auditService.js';
+
 export const uploadFile = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.file) {
@@ -10,7 +12,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    const { title, sectionId, folderId, folderPath, currentFolder, isArchived } = req.body;
+    const { title, sectionId, folderId, folderPath, currentFolder, isArchived, metadata, retentionDate } = req.body;
     const userId = req.user?.id;
 
     if (!userId) {
@@ -45,7 +47,9 @@ export const uploadFile = async (req: Request, res: Response): Promise<void> => 
       folderId: folderId || null,
       folderPath: folderPath || null,
       currentFolder: currentFolder || null,
-      isArchived: isArchived === 'true' || false
+      isArchived: isArchived === 'true' || false,
+      metadata: metadata ? JSON.parse(metadata) : null,
+      retentionDate: retentionDate ? new Date(retentionDate) : null
     };
 
     if (req.user?.role !== 'admin') {
@@ -65,6 +69,8 @@ export const uploadFile = async (req: Request, res: Response): Promise<void> => 
     const file = await prisma.file.create({
       data: payload
     });
+
+    await logAuditAction(req, 'add', 'Uploaded file', file.id, `Uploaded file "${file.filename}"`);
 
     res.status(201).json(file);
   } catch (error) {
@@ -99,6 +105,7 @@ export const getFiles = async (req: Request, res: Response): Promise<void> => {
       folderId: f.folderId || '',
       uploadedBy: f.uploadedBy?.username || 'Unknown',
       createdAt: f.createdAt,
+      metadata: f.metadata,
     }));
 
     res.json(mappedFiles);
@@ -117,6 +124,20 @@ export const deleteFile = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
+    if (req.user?.role !== 'admin') {
+      const request = await prisma.approvalRequest.create({
+        data: {
+          actionType: 'DELETE_FILE',
+          entityType: 'File',
+          entityId: id,
+          payload: { path: file.path }, // Need path to delete from Supabase later
+          requesterId: req.user!.id
+        }
+      });
+      res.status(202).json({ pending: true, message: 'File deletion submitted for admin approval', request });
+      return;
+    }
+
     // Delete from Supabase
     try {
       const { error } = await supabase.storage.from('irms-files').remove([file.path]);
@@ -127,6 +148,8 @@ export const deleteFile = async (req: Request, res: Response): Promise<void> => 
 
     // Delete from db
     await prisma.file.delete({ where: { id } });
+
+    await logAuditAction(req, 'delete', 'Deleted file', file.id, `Deleted file "${file.filename}"`);
 
     res.json({ message: 'File deleted successfully' });
   } catch (error) {
@@ -184,10 +207,135 @@ export const moveFile = async (req: Request, res: Response): Promise<void> => {
       data: { folderId: newFolderId }
     });
     
+    await logAuditAction(req, 'edit', 'Moved file', updatedFile.id, `Moved file "${updatedFile.filename}"`);
+
     res.json(updatedFile);
   } catch (error) {
     console.error('Move error:', error);
     res.status(500).json({ message: 'Move failed' });
+  }
+};
+
+export const updateFileMetadata = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { metadata } = req.body;
+
+    // Currently allowing standard users to update metadata without approval 
+    // to match quick tagging workflows, but this can be routed to approval if needed.
+    
+    const updatedFile = await prisma.file.update({
+      where: { id },
+      data: { metadata }
+    });
+
+    await logAuditAction(req, 'edit', 'Updated file metadata', updatedFile.id, `Updated metadata for "${updatedFile.filename}"`);
+
+    res.json(updatedFile);
+  } catch (error) {
+    console.error('Update metadata error:', error);
+    res.status(500).json({ message: 'Update metadata failed' });
+  }
+};
+
+export const uploadFileVersion = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    if (!req.file) {
+      res.status(400).json({ message: 'No file uploaded' });
+      return;
+    }
+
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    const file = await prisma.file.findUnique({ where: { id } });
+    if (!file) {
+      res.status(404).json({ message: 'File not found' });
+      return;
+    }
+
+    // Upload new version to Supabase
+    const sanitizedOriginalName = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const supabaseFilename = `${Date.now()}-${sanitizedOriginalName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('irms-files')
+      .upload(supabaseFilename, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: false
+      });
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    // Wrap in a transaction:
+    // 1. Create FileVersion with old file details
+    // 2. Update File with new details
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.fileVersion.create({
+        data: {
+          fileId: file.id,
+          versionNumber: file.version,
+          path: file.path,
+          size: file.size,
+          userId: file.userId, // The original uploader of that specific version
+        }
+      });
+
+      return await tx.file.update({
+        where: { id: file.id },
+        data: {
+          path: supabaseFilename,
+          mimetype: req.file.mimetype,
+          size: req.file.size,
+          version: file.version + 1,
+          filename: req.file.originalname,
+          userId: userId // The user who uploaded the new version
+        }
+      });
+    });
+
+    await logAuditAction(req, 'edit', 'Uploaded new version', result.id, `Uploaded v${result.version} for "${result.filename}"`);
+
+    res.status(201).json(result);
+  } catch (error) {
+    console.error('Upload version error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const getFileVersions = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    const versions = await prisma.fileVersion.findMany({
+      where: { fileId: id },
+      include: {
+        uploadedBy: { select: { username: true } }
+      },
+      orderBy: { versionNumber: 'desc' }
+    });
+
+    // We also map the current active version as the top-most one? 
+    // Usually the active one is in the File model. We can just return the historical ones.
+    const mappedVersions = versions.map(v => ({
+      id: v.id,
+      versionNumber: v.versionNumber,
+      path: v.path,
+      size: v.size,
+      uploadedBy: v.uploadedBy?.username || 'Unknown',
+      createdAt: v.createdAt
+    }));
+
+    res.json(mappedVersions);
+  } catch (error) {
+    console.error('Get versions error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -268,6 +416,31 @@ export const uploadTemplate = async (req: Request, res: Response): Promise<void>
     res.json({ message: 'Template updated successfully' });
   } catch (error) {
     console.error('Upload template error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const getComments = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const comments = await prisma.comment.findMany({
+      where: { fileId: id },
+      include: {
+        user: { select: { username: true } }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+    
+    const mapped = comments.map(c => ({
+      id: c.id,
+      content: c.content,
+      username: c.user?.username || 'Unknown',
+      createdAt: c.createdAt
+    }));
+
+    res.json(mapped);
+  } catch (error) {
+    console.error('Get comments error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

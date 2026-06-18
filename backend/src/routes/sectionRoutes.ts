@@ -13,8 +13,8 @@ router.get('/by-slug/:slug', getSectionBySlug);
 router.get('/by-name/:name', getSectionByName);
 
 router.post('/', authorize(['admin']), createSection);
-router.put('/:id', authorize(['admin']), updateSection);
-router.delete('/:id', authorize(['admin']), deleteSection);
+router.put('/:id', authorize(['admin', 'user']), updateSection);
+router.delete('/:id', authorize(['admin', 'user']), deleteSection);
 
 // Section Types
 router.post('/types', authorize(['admin']), createSectionType);

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../utils/prisma.js';
 import { SectionSchema } from '../schemas/index.js';
 import { z } from 'zod';
+import { logAuditAction } from '../services/auditService.js';
 
 const typeToIcon: Record<string, string> = {
   'storage': 'Database',
@@ -166,6 +167,8 @@ export const createSection = async (req: Request, res: Response): Promise<void> 
       include: { type: true }
     });
 
+    await logAuditAction(req, 'add', 'Created section', section.id, `Created section "${section.name}"`);
+
     res.status(201).json({
       ...section,
       icon: typeToIcon[section.type.name] || 'Folder'
@@ -233,6 +236,8 @@ export const updateSection = async (req: Request, res: Response): Promise<void> 
       include: { type: true }
     });
 
+    await logAuditAction(req, 'edit', 'Updated section', updatedSection.id, `Updated section "${updatedSection.name}"`);
+
     res.json({
       ...updatedSection,
       icon: typeToIcon[updatedSection.type.name] || 'Folder'
@@ -269,6 +274,8 @@ export const deleteSection = async (req: Request, res: Response): Promise<void> 
     await prisma.folder.deleteMany({ where: { sectionId: id } });
     await prisma.section.delete({ where: { id } });
 
+    await logAuditAction(req, 'delete', 'Deleted section', id, `Deleted section "${section.name}"`);
+
     res.json({ message: 'Section permanently deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -295,6 +302,8 @@ export const createSectionType = async (req: Request, res: Response): Promise<vo
     const type = await prisma.sectionType.create({
       data: { name }
     });
+
+    await logAuditAction(req, 'system', 'Created section type', type.id, `Created section type "${type.name}"`);
 
     res.status(201).json(type);
   } catch (error) {
@@ -328,6 +337,8 @@ export const updateSectionType = async (req: Request, res: Response): Promise<vo
       data: { name }
     });
 
+    await logAuditAction(req, 'system', 'Updated section type', updated.id, `Updated section type "${updated.name}"`);
+
     res.json(updated);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -354,6 +365,8 @@ export const deleteSectionType = async (req: Request, res: Response): Promise<vo
     }
 
     await prisma.sectionType.delete({ where: { id } });
+
+    await logAuditAction(req, 'system', 'Deleted section type', id, `Deleted section type "${existing.name}"`);
 
     res.json({ message: 'Section type deleted successfully' });
   } catch (error) {

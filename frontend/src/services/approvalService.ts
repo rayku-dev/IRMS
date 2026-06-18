@@ -1,6 +1,4 @@
-import { getAuthHeaders } from './authService';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+import { api } from '../lib/api';
 
 export interface ApprovalRequest {
   id: string;
@@ -21,42 +19,16 @@ export interface ApprovalRequest {
 }
 
 export const getPendingApprovals = async (): Promise<ApprovalRequest[]> => {
-  const response = await fetch(`${API_URL}/approvals/pending`, {
-    headers: getAuthHeaders()
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch pending approvals');
-  }
-
-  return response.json();
+  const response = await api.get('/approvals/pending');
+  return response.data;
 };
 
 export const approveRequest = async (id: string): Promise<{ message: string }> => {
-  const response = await fetch(`${API_URL}/approvals/${id}/approve`, {
-    method: 'POST',
-    headers: getAuthHeaders()
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to approve request');
-  }
-
-  return response.json();
+  const response = await api.post(`/approvals/${id}/approve`);
+  return response.data;
 };
 
 export const rejectRequest = async (id: string): Promise<{ message: string }> => {
-  const response = await fetch(`${API_URL}/approvals/${id}/reject`, {
-    method: 'POST',
-    headers: getAuthHeaders()
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to reject request');
-  }
-
-  return response.json();
+  const response = await api.post(`/approvals/${id}/reject`);
+  return response.data;
 };

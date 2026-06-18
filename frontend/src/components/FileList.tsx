@@ -98,9 +98,25 @@ const FileList: React.FC<FileListProps> = ({ folderId, onFileCountChange }) => {
             ) : (
               files.map(file => (
                 <tr key={file.id} className="border-b last:border-0 hover:bg-muted/30">
-                  <td className="px-6 py-4 font-medium flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-primary" />
-                    {file.originalName}
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2 font-medium">
+                      <FileText className="h-4 w-4 text-primary" />
+                      {file.metadata?.title || file.originalName}
+                    </div>
+                    {(file.metadata?.category || (file.metadata?.tags && file.metadata.tags.length > 0)) && (
+                      <div className="flex flex-wrap items-center gap-1 mt-1 ml-6">
+                        {file.metadata?.category && (
+                          <span className="bg-blue-100 text-blue-800 text-[10px] px-1.5 py-0.5 rounded uppercase font-semibold">
+                            {file.metadata.category}
+                          </span>
+                        )}
+                        {file.metadata?.tags?.map((tag: string, idx: number) => (
+                          <span key={idx} className="bg-muted text-muted-foreground text-[10px] px-1.5 py-0.5 rounded">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4">{(file.size / 1024).toFixed(2)} KB</td>
                   <td className="px-6 py-4">
@@ -110,16 +126,16 @@ const FileList: React.FC<FileListProps> = ({ folderId, onFileCountChange }) => {
                   </td>
                   <td className="px-6 py-4">{file.createdAt ? new Date(file.createdAt).toLocaleDateString() : 'Unknown'}</td>
                   <td className="px-6 py-4 text-right space-x-2">
-                    <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10 hover:text-primary" onClick={() => { setFileToView(file); setViewerModalOpen(true); }}>
+                    <Button aria-label={`View ${file.originalName}`} variant="ghost" size="icon" className="text-primary hover:bg-primary/10 hover:text-primary" onClick={() => { setFileToView(file); setViewerModalOpen(true); }}>
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDownload(file.id, file.originalName)}>
+                    <Button aria-label={`Download ${file.originalName}`} variant="ghost" size="icon" onClick={() => handleDownload(file.id, file.originalName)}>
                       <Download className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-blue-500 hover:bg-blue-500/10 hover:text-blue-600" onClick={() => { setFileToMove(file); setMoveFileModalOpen(true); }}>
+                    <Button aria-label={`Move ${file.originalName}`} variant="ghost" size="icon" className="text-blue-500 hover:bg-blue-500/10 hover:text-blue-600" onClick={() => { setFileToMove(file); setMoveFileModalOpen(true); }}>
                       <CornerUpRight className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDelete(file.id)}>
+                    <Button aria-label={`Delete ${file.originalName}`} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDelete(file.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </td>
