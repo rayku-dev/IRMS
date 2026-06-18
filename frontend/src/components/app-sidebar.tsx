@@ -2,7 +2,6 @@ import * as React from "react"
 import {
   LayoutDashboard,
   FileSpreadsheet,
-  Settings,
   Users,
   Layers,
   Archive,

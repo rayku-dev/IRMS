@@ -134,7 +134,7 @@ const Dashboard: React.FC = () => {
                         paddingAngle={5}
                         dataKey="value"
                       >
-                        {auditStats.actionDistribution.map((entry: any, index: number) => (
+                        {auditStats.actionDistribution.map((_entry: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444'][index % 5]} />
                         ))}
                       </Pie>

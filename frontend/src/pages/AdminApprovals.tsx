@@ -5,7 +5,7 @@ import { getPendingApprovals, approveRequest, rejectRequest } from '../services/
 import type { ApprovalRequest } from '../services/approvalService';
 import { toast } from 'sonner';
 import { Check, X, Clock, File, Folder, Database, RefreshCw } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 const AdminApprovals: React.FC = () => {
