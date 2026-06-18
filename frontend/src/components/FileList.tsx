@@ -47,15 +47,19 @@ const FileList: React.FC<FileListProps> = ({ folderId, onFileCountChange }) => {
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this file?')) return;
     try {
-      await deleteFile(id);
-      toast.success('File deleted');
-      addActivity({
-        action: 'Deleted file',
-        description: 'A file was deleted',
-        type: 'delete',
-        user: user?.username
-      });
-      fetchFiles();
+      const result: any = await deleteFile(id);
+      if (result?.pending) {
+        toast.info(result.message);
+      } else {
+        toast.success('File deleted');
+        addActivity({
+          action: 'Deleted file',
+          description: 'A file was deleted',
+          type: 'delete',
+          user: user?.username
+        });
+        fetchFiles();
+      }
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete file');
     }
@@ -133,15 +137,19 @@ const FileList: React.FC<FileListProps> = ({ folderId, onFileCountChange }) => {
         onMove={async (fId, newFolderId) => {
           // Implement move logic by calling moveFile from fileService
           const { moveFile } = await import('../services/fileService');
-          await moveFile(fId, newFolderId);
-          toast.success('File moved successfully');
-          addActivity({
-            action: 'Moved file',
-            description: `File "${fileToMove?.originalName || 'unknown'}" was moved`,
-            type: 'edit',
-            user: user?.username
-          });
-          fetchFiles();
+          const result: any = await moveFile(fId, newFolderId);
+          if (result?.pending) {
+            toast.info(result.message);
+          } else {
+            toast.success('File moved successfully');
+            addActivity({
+              action: 'Moved file',
+              description: `File "${fileToMove?.originalName || 'unknown'}" was moved`,
+              type: 'edit',
+              user: user?.username
+            });
+            fetchFiles();
+          }
         }}
       />
       

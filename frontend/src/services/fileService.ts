@@ -16,7 +16,7 @@ export const getFiles = async (folderId: string) => {
   return response.data;
 };
 
-export const uploadFile = async (folderId: string, file: File): Promise<FileData> => {
+export const uploadFile = async (folderId: string, file: File): Promise<any> => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('folderId', folderId);
@@ -31,7 +31,7 @@ export const deleteFile = async (id: string): Promise<void> => {
   await api.delete(`/files/${id}`);
 };
 
-export const moveFile = async (id: string, newFolderId: string): Promise<FileData> => {
+export const moveFile = async (id: string, newFolderId: string): Promise<any> => {
   const response = await api.put(`/files/${id}/move`, { newFolderId });
   return response.data;
 };

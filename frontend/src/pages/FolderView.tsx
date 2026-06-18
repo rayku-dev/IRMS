@@ -123,10 +123,14 @@ const FolderView: React.FC = () => {
     const newName = window.prompt('Enter new folder name:', oldName);
     if (!newName || newName === oldName) return;
     try {
-      await renameFolder(id, newName);
-      toast.success('Folder renamed');
-      addActivity({ action: 'Renamed folder', description: `Folder renamed to "${newName}"`, type: 'edit', user: user?.username });
-      fetchFoldersData(sectionData!.id, currentFolderId || undefined);
+      const result: any = await renameFolder(id, newName);
+      if (result?.pending) {
+        toast.info(result.message);
+      } else {
+        toast.success('Folder renamed');
+        addActivity({ action: 'Renamed folder', description: `Folder renamed to "${newName}"`, type: 'edit', user: user?.username });
+        fetchFoldersData(sectionData!.id, currentFolderId || undefined);
+      }
     } catch (error: any) {
       toast.error(error.message || 'Failed to rename folder');
     }
@@ -136,10 +140,14 @@ const FolderView: React.FC = () => {
     e.stopPropagation();
     if (!window.confirm('Are you sure you want to delete this folder?')) return;
     try {
-      await deleteFolder(id);
-      toast.success('Folder deleted');
-      addActivity({ action: 'Deleted folder', description: 'A folder was deleted', type: 'delete', user: user?.username });
-      fetchFoldersData(sectionData!.id, currentFolderId || undefined);
+      const result: any = await deleteFolder(id);
+      if (result?.pending) {
+        toast.info(result.message);
+      } else {
+        toast.success('Folder deleted');
+        addActivity({ action: 'Deleted folder', description: 'A folder was deleted', type: 'delete', user: user?.username });
+        fetchFoldersData(sectionData!.id, currentFolderId || undefined);
+      }
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete folder');
     }

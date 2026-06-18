@@ -34,21 +34,36 @@ export const uploadFile = async (req: Request, res: Response): Promise<void> => 
       throw uploadError;
     }
 
+    const payload = {
+      filename: req.file.originalname,
+      title: title || req.file.originalname,
+      path: supabaseFilename, 
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      userId,
+      sectionId: sectionId || null,
+      folderId: folderId || null,
+      folderPath: folderPath || null,
+      currentFolder: currentFolder || null,
+      isArchived: isArchived === 'true' || false
+    };
+
+    if (req.user?.role !== 'admin') {
+      const request = await prisma.approvalRequest.create({
+        data: {
+          actionType: 'CREATE_FILE',
+          entityType: 'File',
+          payload,
+          requesterId: userId
+        }
+      });
+      res.status(202).json({ pending: true, message: 'File upload submitted for admin approval', request });
+      return;
+    }
+
     // Save metadata to database
     const file = await prisma.file.create({
-      data: {
-        filename: req.file.originalname,
-        title: title || req.file.originalname,
-        path: supabaseFilename, 
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        userId,
-        sectionId: sectionId || null,
-        folderId: folderId || null,
-        folderPath: folderPath || null,
-        currentFolder: currentFolder || null,
-        isArchived: isArchived === 'true' || false
-      }
+      data: payload
     });
 
     res.status(201).json(file);
@@ -147,6 +162,20 @@ export const moveFile = async (req: Request, res: Response): Promise<void> => {
     
     if (!newFolderId) {
       res.status(400).json({ message: 'New folder ID is required' });
+      return;
+    }
+
+    if (req.user?.role !== 'admin') {
+      const request = await prisma.approvalRequest.create({
+        data: {
+          actionType: 'MOVE_FILE',
+          entityType: 'File',
+          entityId: id,
+          payload: { folderId: newFolderId },
+          requesterId: req.user!.id
+        }
+      });
+      res.status(202).json({ pending: true, message: 'File move submitted for admin approval', request });
       return;
     }
 

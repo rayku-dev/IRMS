@@ -20,7 +20,7 @@ export const createSection = async (sectionData: any): Promise<Section> => {
   return response.data;
 };
 
-export const updateSection = async (id: string, sectionData: any): Promise<Section> => {
+export const updateSection = async (id: string, sectionData: any): Promise<any> => {
   const response = await api.put(`/sections/${id}`, sectionData);
   return response.data;
 };
@@ -44,6 +44,7 @@ export const deleteSectionType = async (id: string): Promise<void> => {
   await api.delete(`/sections/types/${id}`);
 };
 
-export const deleteSection = async (id: string): Promise<void> => {
-  await api.delete(`/sections/${id}`);
+export const deleteSection = async (id: string): Promise<any> => {
+  const response = await api.delete(`/sections/${id}`);
+  return response.data;
 };

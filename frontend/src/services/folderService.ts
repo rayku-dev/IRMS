@@ -21,11 +21,12 @@ export const createFolder = async (folderData: { name: string; sectionId: string
   return response.data;
 };
 
-export const renameFolder = async (id: string, name: string): Promise<Folder> => {
+export const renameFolder = async (id: string, name: string): Promise<any> => {
   const response = await api.put(`/folders/${id}`, { name });
   return response.data;
 };
 
-export const deleteFolder = async (id: string): Promise<void> => {
-  await api.delete(`/folders/${id}`);
+export const deleteFolder = async (id: string): Promise<any> => {
+  const response = await api.delete(`/folders/${id}`);
+  return response.data;
 };

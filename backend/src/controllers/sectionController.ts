@@ -213,6 +213,20 @@ export const updateSection = async (req: Request, res: Response): Promise<void> 
     if (description) updateData.description = description;
     if (typeId) updateData.typeId = typeId;
 
+    if (req.user?.role !== 'admin') {
+      const request = await prisma.approvalRequest.create({
+        data: {
+          actionType: 'EDIT_SECTION',
+          entityType: 'Section',
+          entityId: id,
+          payload: updateData,
+          requesterId: req.user!.id
+        }
+      });
+      res.status(202).json({ pending: true, message: 'Section edit submitted for admin approval', request });
+      return;
+    }
+
     const updatedSection = await prisma.section.update({
       where: { id },
       data: updateData,
@@ -234,6 +248,20 @@ export const deleteSection = async (req: Request, res: Response): Promise<void> 
     const section = await prisma.section.findUnique({ where: { id } });
     if (!section) {
       res.status(404).json({ message: 'Section not found' });
+      return;
+    }
+
+    if (req.user?.role !== 'admin') {
+      const request = await prisma.approvalRequest.create({
+        data: {
+          actionType: 'DELETE_SECTION',
+          entityType: 'Section',
+          entityId: id,
+          payload: {},
+          requesterId: req.user!.id
+        }
+      });
+      res.status(202).json({ pending: true, message: 'Section deletion submitted for admin approval', request });
       return;
     }
 

@@ -9,9 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Navigate } from 'react-router-dom';
-import SectionTypeManager from '../components/SectionTypeManager';
 
-const AdminPanel: React.FC = () => {
+const AdminUsers: React.FC = () => {
   const { user, users, registerUser, deleteUser } = useAuth();
   const { addActivity } = useRecentActivity();
   const [showForm, setShowForm] = useState(false);
@@ -94,8 +93,8 @@ const AdminPanel: React.FC = () => {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Admin Panel</h1>
-          <p className="text-muted-foreground">Manage users and system settings</p>
+          <h1 className="text-3xl font-bold mb-2">User Management</h1>
+          <p className="text-muted-foreground">Manage users and roles</p>
         </div>
         <Button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2">
           <UserPlus className="h-5 w-5" />
@@ -261,10 +260,8 @@ const AdminPanel: React.FC = () => {
           </table>
         </div>
       </Card>
-
-      <SectionTypeManager />
     </div>
   );
 };
 
-export default AdminPanel;
+export default AdminUsers;

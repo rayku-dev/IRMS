@@ -94,6 +94,20 @@ export const updateFolder = async (req: Request, res: Response): Promise<void> =
     const { id } = req.params;
     const { name, description } = req.body;
 
+    if (req.user?.role !== 'admin') {
+      const request = await prisma.approvalRequest.create({
+        data: {
+          actionType: 'EDIT_FOLDER',
+          entityType: 'Folder',
+          entityId: id,
+          payload: { name, description },
+          requesterId: req.user!.id
+        }
+      });
+      res.status(202).json({ pending: true, message: 'Folder edit submitted for admin approval', request });
+      return;
+    }
+
     const folder = await prisma.folder.update({
       where: { id },
       data: { name, description }
@@ -113,6 +127,20 @@ export const deleteFolder = async (req: Request, res: Response): Promise<void> =
     const folder = await prisma.folder.findUnique({ where: { id } });
     if (!folder) {
       res.status(404).json({ message: 'Folder not found' });
+      return;
+    }
+
+    if (req.user?.role !== 'admin') {
+      const request = await prisma.approvalRequest.create({
+        data: {
+          actionType: 'DELETE_FOLDER',
+          entityType: 'Folder',
+          entityId: id,
+          payload: {},
+          requesterId: req.user!.id
+        }
+      });
+      res.status(202).json({ pending: true, message: 'Folder deletion submitted for admin approval', request });
       return;
     }
 

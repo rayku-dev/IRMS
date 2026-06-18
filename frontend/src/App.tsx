@@ -4,9 +4,12 @@ import DashboardLayout from './layouts/DashboardLayout';
 
 // Lazy loading pages for code splitting
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Records = lazy(() => import('./pages/Records'));
 const Login = lazy(() => import('./pages/Login'));
 const FolderView = lazy(() => import('./pages/FolderView'));
-const AdminPanel = lazy(() => import('./pages/AdminPanel'));
+const AdminUsers = lazy(() => import('./pages/AdminUsers'));
+const AdminSectionTypes = lazy(() => import('./pages/AdminSectionTypes'));
+const AdminApprovals = lazy(() => import('./pages/AdminApprovals'));
 const NAPForm1 = lazy(() => import('./pages/NAPForm1'));
 
 // Loading fallback UI
@@ -33,10 +36,13 @@ function App() {
             {/* Protected layout wrapping main application */}
             <Route path="/" element={<DashboardLayout />}>
               <Route index element={<Dashboard />} />
+              <Route path="records" element={<Records />} />
               <Route path="folder/:section" element={<FolderView />} />
               <Route path="folder/:section/:subfolder" element={<FolderView />} />
               <Route path="folder/:section/:subfolder/:subsubfolder" element={<FolderView />} />
-              <Route path="admin" element={<AdminPanel />} />
+              <Route path="admin/users" element={<AdminUsers />} />
+              <Route path="admin/section-types" element={<AdminSectionTypes />} />
+              <Route path="admin/approvals" element={<AdminApprovals />} />
               <Route path="nap-form-1" element={<NAPForm1 />} />
               {/* Add more lazy-loaded nested routes here */}
             </Route>

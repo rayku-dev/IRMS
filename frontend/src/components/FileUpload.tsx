@@ -24,15 +24,19 @@ const FileUpload: React.FC<FileUploadProps> = ({ folderId, onUploadSuccess }) =>
     setIsUploading(true);
     
     try {
-      await uploadFile(folderId, file);
-      toast.success('File uploaded successfully');
-      addActivity({
-        action: 'Uploaded file',
-        description: `File "${file.name}" was uploaded`,
-        type: 'add',
-        user: user?.username
-      });
-      onUploadSuccess();
+      const result: any = await uploadFile(folderId, file);
+      if (result?.pending) {
+        toast.info(result.message);
+      } else {
+        toast.success('File uploaded successfully');
+        addActivity({
+          action: 'Uploaded file',
+          description: `File "${file.name}" was uploaded`,
+          type: 'add',
+          user: user?.username
+        });
+        onUploadSuccess();
+      }
     } catch (error: any) {
       toast.error(error.message || 'Upload failed');
     } finally {

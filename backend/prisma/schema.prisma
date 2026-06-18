@@ -18,8 +18,10 @@ model User {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @default(now()) @updatedAt
   deletedAt DateTime?
-  files     File[]     // Relation to uploaded files
-  auditLogs AuditLog[] // Relation to audit logs
+  files            File[]            // Relation to uploaded files
+  auditLogs        AuditLog[]        // Relation to audit logs
+  requestedApprovals ApprovalRequest[] @relation("RequestedApprovals")
+  handledApprovals   ApprovalRequest[] @relation("HandledApprovals")
 }
 
 model SectionType {
@@ -110,4 +112,22 @@ model AuditLog {
 
   @@index([userId])
   @@index([entity, entityId])
+}
+
+model ApprovalRequest {
+  id           String   @id @default(uuid())
+  actionType   String   // e.g., "CREATE_FILE", "EDIT_SECTION", "DELETE_SECTION", "EDIT_FOLDER", "DELETE_FOLDER", "MOVE_FILE"
+  entityType   String   // e.g., "File", "Section", "Folder"
+  entityId     String?  // The ID of the item being modified or deleted
+  payload      Json     // The data needed to execute the action (e.g., file metadata, new folder name)
+  status       String   @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
+  requestedBy  User     @relation("RequestedApprovals", fields: [requesterId], references: [id])
+  requesterId  String
+  approvedBy   User?    @relation("HandledApprovals", fields: [approverId], references: [id])
+  approverId   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  @@index([status])
+  @@index([requesterId])
 }
