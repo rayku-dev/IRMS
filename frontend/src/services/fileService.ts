@@ -104,3 +104,8 @@ export const getPublicLink = async (id: string): Promise<string> => {
   const response = await api.get(`/files/${id}/public-link`);
   return response.data.url;
 };
+
+export const getPublicFileInfo = async (id: string): Promise<any> => {
+  const response = await api.get(`/files/info/${id}`);
+  return response.data;
+};

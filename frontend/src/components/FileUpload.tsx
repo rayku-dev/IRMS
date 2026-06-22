@@ -13,8 +13,9 @@ interface FileUploadProps {
   folderId: string;
   onUploadSuccess: () => void;
   draggedFile?: File | null;
+  children?: React.ReactNode;
 }
-const FileUpload: React.FC<FileUploadProps> = ({ folderId, onUploadSuccess, draggedFile }) => {
+const FileUpload: React.FC<FileUploadProps> = ({ folderId, onUploadSuccess, draggedFile, children }) => {
   const { user } = useAuth();
   const { addActivity } = useRecentActivity();
   const [isUploading, setIsUploading] = useState(false);
@@ -83,13 +84,19 @@ const FileUpload: React.FC<FileUploadProps> = ({ folderId, onUploadSuccess, drag
         ref={fileInputRef} 
         onChange={handleFileSelect}
       />
-      <Button 
-        onClick={() => fileInputRef.current?.click()} 
-        className="flex items-center gap-2"
-      >
-        <Upload className="h-4 w-4" />
-        Upload File
-      </Button>
+      {children ? (
+        <div onClick={() => fileInputRef.current?.click()}>
+          {children}
+        </div>
+      ) : (
+        <Button 
+          onClick={() => fileInputRef.current?.click()} 
+          className="flex items-center gap-2"
+        >
+          <Upload className="h-4 w-4" />
+          Upload File
+        </Button>
+      )}
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[425px]">

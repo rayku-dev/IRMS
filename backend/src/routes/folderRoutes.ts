@@ -1,8 +1,10 @@
 import { Router } from 'express';
-import { createFolder, getFolderById, updateFolder, deleteFolder, getFolders } from '../controllers/folderController.js';
+import { createFolder, getFolderById, updateFolder, deleteFolder, getFolders, getPublicFolderInfo } from '../controllers/folderController.js';
 import { authenticate, authorize } from '../middleware/authMiddleware.js';
 
 const router = Router();
+
+router.get('/info/:id', getPublicFolderInfo);
 
 router.use(authenticate);
 

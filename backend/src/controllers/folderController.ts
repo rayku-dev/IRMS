@@ -92,6 +92,31 @@ export const getFolderById = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+export const getPublicFolderInfo = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const folder = await prisma.folder.findUnique({
+      where: { id },
+      include: {
+        children: { orderBy: { order: 'asc' }, select: { id: true, name: true, description: true } },
+        files: { 
+          orderBy: { createdAt: 'desc' },
+          select: { id: true, filename: true, path: true, mimetype: true, size: true, createdAt: true, metadata: true }
+        }
+      }
+    });
+
+    if (!folder) {
+      res.status(404).json({ message: 'Folder not found' });
+      return;
+    }
+
+    res.json(folder);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export const updateFolder = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;

@@ -178,12 +178,14 @@ const Records: React.FC = () => {
         />
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold">System Sections</h2>
-          <button
-            onClick={() => setIsAddOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg shadow hover:bg-primary/90 transition font-medium"
-          >
-            <Plus className="h-4 w-4" /> Add Section
-          </button>
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => setIsAddOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg shadow hover:bg-primary/90 transition font-medium"
+            >
+              <Plus className="h-4 w-4" /> Add Section
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -193,10 +195,16 @@ const Records: React.FC = () => {
             <div className="col-span-3 flex flex-col items-center justify-center py-16">
               <Archive className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
               <h2 className="text-xl font-semibold mb-2">No Sections Found</h2>
-              <p className="text-muted-foreground mb-4">Get started by creating your first section.</p>
-              <button onClick={() => setIsAddOpen(true)} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg shadow hover:bg-primary/90 transition">
-                Add Section
-              </button>
+              {user?.role === 'admin' ? (
+                <>
+                  <p className="text-muted-foreground mb-4">Get started by creating your first section.</p>
+                  <button onClick={() => setIsAddOpen(true)} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg shadow hover:bg-primary/90 transition">
+                    Add Section
+                  </button>
+                </>
+              ) : (
+                <p className="text-muted-foreground mb-4">No sections have been created yet.</p>
+              )}
             </div>
           ) : (
             filteredSections.map((section) => {
@@ -226,7 +234,8 @@ const Records: React.FC = () => {
                         {section.description}
                       </p>
                     </div>
-                    <div className="ml-2 flex gap-1">
+                    {user?.role === 'admin' && (
+                      <div className="ml-2 flex gap-1">
                         <button
                           className="p-2 rounded-lg hover:bg-blue-500/10 text-blue-500 transition-all"
                           onClick={(e) => { e.stopPropagation(); setSelectedSection(section); setIsRenameOpen(true); }}
@@ -240,6 +249,7 @@ const Records: React.FC = () => {
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
+                    )}
                   </div>
                 </div>
               );

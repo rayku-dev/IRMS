@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import { uploadFile, getFiles, deleteFile, downloadFile, moveFile, getPublicLink, downloadPublicFile, downloadTemplate, uploadTemplate, updateFileMetadata, uploadFileVersion, getFileVersions, getComments } from '../controllers/fileController.js';
+import { uploadFile, getFiles, deleteFile, downloadFile, moveFile, getPublicLink, getPublicFileInfo, downloadPublicFile, downloadTemplate, uploadTemplate, updateFileMetadata, uploadFileVersion, getFileVersions, getComments } from '../controllers/fileController.js';
 import { authenticate, authorize } from '../middleware/authMiddleware.js';
 import { upload } from '../middleware/uploadMiddleware.js';
 
 const router = Router();
 
+router.get('/info/:id', getPublicFileInfo);
 router.get('/public/:token', downloadPublicFile);
 router.get('/template/:name', downloadTemplate);
 

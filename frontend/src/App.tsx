@@ -11,6 +11,9 @@ const AdminUsers = lazy(() => import('./pages/AdminUsers'));
 const AdminSectionTypes = lazy(() => import('./pages/AdminSectionTypes'));
 const AdminApprovals = lazy(() => import('./pages/AdminApprovals'));
 const NAPForm1 = lazy(() => import('./pages/NAPForm1'));
+const SharedFileView = lazy(() => import('./pages/SharedFileView'));
+const SharedFolderView = lazy(() => import('./pages/SharedFolderView'));
+const FileView = lazy(() => import('./pages/FileView'));
 
 // Loading fallback UI
 const PageLoader = () => (
@@ -33,9 +36,14 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             
+            {/* Public Share Routes */}
+            <Route path="/share/f/:id" element={<SharedFileView />} />
+            <Route path="/share/d/:id" element={<SharedFolderView />} />
+            
             {/* Protected layout wrapping main application */}
             <Route path="/" element={<DashboardLayout />}>
               <Route index element={<Dashboard />} />
+              <Route path="file/:id" element={<FileView />} />
               <Route path="records" element={<Records />} />
               <Route path="folder/:section" element={<FolderView />} />
               <Route path="folder/:section/:subfolder" element={<FolderView />} />

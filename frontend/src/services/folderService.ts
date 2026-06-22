@@ -30,3 +30,8 @@ export const deleteFolder = async (id: string): Promise<any> => {
   const response = await api.delete(`/folders/${id}`);
   return response.data;
 };
+
+export const getPublicFolderInfo = async (id: string): Promise<any> => {
+  const response = await api.get(`/folders/info/${id}`);
+  return response.data;
+};

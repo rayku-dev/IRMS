@@ -339,6 +339,41 @@ export const getFileVersions = async (req: Request, res: Response): Promise<void
   }
 };
 
+export const getPublicFileInfo = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const file = await prisma.file.findUnique({
+      where: { id },
+      include: {
+        uploadedBy: { select: { username: true } },
+      }
+    });
+
+    if (!file) {
+      res.status(404).json({ message: 'File not found' });
+      return;
+    }
+
+    // Generate public URL for preview
+    const { data } = supabase.storage.from('irms-files').getPublicUrl(file.path);
+
+    res.json({
+      id: file.id,
+      originalName: file.filename,
+      fileName: file.path,
+      mimeType: file.mimetype,
+      size: file.size,
+      folderId: file.folderId || '',
+      uploadedBy: file.uploadedBy?.username || 'Unknown',
+      createdAt: file.createdAt,
+      metadata: file.metadata,
+      url: data.publicUrl
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export const getPublicLink = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
