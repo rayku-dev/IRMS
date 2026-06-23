@@ -4,12 +4,13 @@ import DashboardLayout from './layouts/DashboardLayout';
 
 // Lazy loading pages for code splitting
 const Dashboard = lazy(() => import('./pages/Dashboard'));
-const Records = lazy(() => import('./pages/Records'));
 const Login = lazy(() => import('./pages/Login'));
 const FolderView = lazy(() => import('./pages/FolderView'));
 const AdminUsers = lazy(() => import('./pages/AdminUsers'));
 const AdminSectionTypes = lazy(() => import('./pages/AdminSectionTypes'));
 const AdminApprovals = lazy(() => import('./pages/AdminApprovals'));
+const AdminArchive = lazy(() => import('./pages/AdminArchive'));
+const AdminDisposal = lazy(() => import('./pages/AdminDisposal'));
 const NAPForm1 = lazy(() => import('./pages/NAPForm1'));
 const SharedFileView = lazy(() => import('./pages/SharedFileView'));
 const SharedFolderView = lazy(() => import('./pages/SharedFolderView'));
@@ -44,13 +45,17 @@ function App() {
             <Route path="/" element={<DashboardLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="file/:id" element={<FileView />} />
-              <Route path="records" element={<Records />} />
               <Route path="folder/:section" element={<FolderView />} />
               <Route path="folder/:section/:subfolder" element={<FolderView />} />
               <Route path="folder/:section/:subfolder/:subsubfolder" element={<FolderView />} />
-              <Route path="admin/users" element={<AdminUsers />} />
-              <Route path="admin/section-types" element={<AdminSectionTypes />} />
-              <Route path="admin/approvals" element={<AdminApprovals />} />
+              {/* Admin Routes */}
+              <Route path="admin">
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="section-types" element={<AdminSectionTypes />} />
+                <Route path="approvals" element={<AdminApprovals />} />
+                <Route path="archive" element={<AdminArchive />} />
+                <Route path="disposal" element={<AdminDisposal />} />
+              </Route>
               <Route path="nap-form-1" element={<NAPForm1 />} />
               {/* Add more lazy-loaded nested routes here */}
             </Route>

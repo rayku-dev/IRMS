@@ -1,10 +1,13 @@
 import { Router } from 'express';
-import { getAuditLogs, getStats } from '../controllers/auditController.js';
+import { getAuditLogs, getStats, getDisposals } from '../controllers/auditController.js';
 import { authenticate, authorize } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
-router.get('/stats', authenticate, authorize(['admin', 'user']), getStats);
-router.get('/', authenticate, authorize(['admin']), getAuditLogs);
+router.use(authenticate);
+
+router.get('/', authorize(['admin']), getAuditLogs);
+router.get('/disposals', authorize(['admin']), getDisposals);
+router.get('/stats', authorize(['admin', 'user']), getStats);
 
 export default router;

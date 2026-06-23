@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useRecentActivity } from '../contexts/RecentActivityContext';
@@ -52,12 +52,13 @@ const FolderView: React.FC = () => {
   const [fileToMove, setFileToMove] = useState<FileData | null>(null);
   const [infoModalOpen, setInfoModalOpen] = useState(false);
   const [fileForInfo, setFileForInfo] = useState<FileData | null>(null);
+  const fileUploadRef = useRef<any>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length > 0 && currentFolderId) {
+    if (acceptedFiles.length > 0 && sectionData) {
       setDraggedFile(acceptedFiles[0]);
     }
-  }, [currentFolderId]);
+  }, [sectionData]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -88,7 +89,8 @@ const FolderView: React.FC = () => {
         const filesData = await getFiles(parentId);
         setFiles(filesData);
       } else {
-        setFiles([]);
+        const filesData = await getFiles(undefined, sectionId);
+        setFiles(filesData);
       }
     } catch (error: any) {
       toast.error(error.message || 'Error fetching content');
@@ -366,17 +368,16 @@ const FolderView: React.FC = () => {
                   <span>New folder</span>
                 </DropdownMenuItem>
               )}
-              {canAddFolder && currentFolderId && <DropdownMenuSeparator />}
-              {currentFolderId && (
-                <FileUpload 
-                  folderId={currentFolderId} 
-                  onUploadSuccess={() => fetchContentData(sectionData!.id, currentFolderId || undefined)}
+              {canAddFolder && <DropdownMenuSeparator />}
+              {(currentFolderId || canAddFolder) && (
+                <DropdownMenuItem 
+                  onSelect={(e) => e.preventDefault()} 
+                  onClick={() => fileUploadRef.current?.open()} 
+                  className="cursor-pointer gap-2 py-2"
                 >
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer gap-2 py-2">
-                    <UploadIcon className="h-4 w-4 text-muted-foreground" />
-                    <span>File upload</span>
-                  </DropdownMenuItem>
-                </FileUpload>
+                  <UploadIcon className="h-4 w-4 text-muted-foreground" />
+                  <span>File upload</span>
+                </DropdownMenuItem>
               )}
               {!canAddFolder && !currentFolderId && (
                 <DropdownMenuItem disabled>
@@ -400,19 +401,10 @@ const FolderView: React.FC = () => {
                 <Plus className="h-4 w-4" /> New Folder
               </Button>
             )}
-            {currentFolderId && (
-              <FileUpload 
-                folderId={currentFolderId} 
-                draggedFile={draggedFile}
-                onUploadSuccess={() => {
-                  setDraggedFile(null);
-                  fetchContentData(sectionData!.id, currentFolderId || undefined);
-                }} 
-              >
-                <Button variant="default" className="gap-2">
-                  <UploadIcon className="h-4 w-4" /> Upload File
-                </Button>
-              </FileUpload>
+            {(currentFolderId || canAddFolder) && (
+              <Button onClick={() => fileUploadRef.current?.open()} variant="default" className="gap-2">
+                <UploadIcon className="h-4 w-4" /> Upload File
+              </Button>
             )}
           </div>
         </div>
@@ -751,6 +743,21 @@ const FolderView: React.FC = () => {
         }}
         file={fileForInfo}
       />
+
+      {sectionData && (
+        <FileUpload
+          ref={fileUploadRef}
+          folderId={currentFolderId}
+          sectionId={!currentFolderId ? sectionData.id : undefined}
+          draggedFile={draggedFile}
+          onUploadSuccess={() => {
+            setDraggedFile(null);
+            fetchContentData(sectionData.id, currentFolderId || undefined);
+          }}
+        >
+          <div className="hidden" />
+        </FileUpload>
+      )}
     </div>
   );
 };

@@ -31,6 +31,30 @@ export const getAuditLogs = async (req: Request, res: Response): Promise<void> =
   }
 };
 
+export const getDisposals = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const logs = await prisma.auditLog.findMany({
+      where: { action: 'dispose', entity: 'file' },
+      orderBy: { createdAt: 'desc' },
+      include: { user: { select: { username: true } } }
+    });
+
+    const formattedLogs = logs.map(log => ({
+      id: log.id,
+      fileId: log.entityId,
+      disposedBy: log.user?.username || 'System',
+      reason: (log.details as any)?.reason || 'Manual Disposal',
+      timestamp: log.createdAt,
+      originalRequester: (log.details as any)?.requesterId || 'Unknown'
+    }));
+
+    res.json(formattedLogs);
+  } catch (error) {
+    console.error('Error fetching disposal logs:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export const getStats = async (req: Request, res: Response): Promise<void> => {
   try {
     // Action Distribution

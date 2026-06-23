@@ -3,6 +3,7 @@ import prisma from '../utils/prisma.js';
 import { SectionSchema } from '../schemas/index.js';
 import { z } from 'zod';
 import { logAuditAction } from '../services/auditService.js';
+import { supabase } from '../utils/supabase.js';
 
 const typeToIcon: Record<string, string> = {
   'storage': 'Database',
@@ -268,6 +269,21 @@ export const deleteSection = async (req: Request, res: Response): Promise<void> 
       });
       res.status(202).json({ pending: true, message: 'Section deletion submitted for admin approval', request });
       return;
+    }
+
+    // Fetch associated files to get their paths
+    const filesToDelete = await prisma.file.findMany({
+      where: { sectionId: id },
+      select: { path: true }
+    });
+
+    // Delete from Supabase bucket
+    const filePaths = filesToDelete.map(f => f.path);
+    if (filePaths.length > 0) {
+      const { error } = await supabase.storage.from('irms-files').remove(filePaths);
+      if (error) {
+        console.error('Failed to delete some files from Supabase during section deletion:', error);
+      }
     }
 
     await prisma.file.deleteMany({ where: { sectionId: id } });

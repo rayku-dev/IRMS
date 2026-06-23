@@ -10,12 +10,17 @@ import { Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FileUploadProps {
-  folderId: string;
+  folderId?: string | null;
+  sectionId?: string;
   onUploadSuccess: () => void;
   draggedFile?: File | null;
   children?: React.ReactNode;
 }
-const FileUpload: React.FC<FileUploadProps> = ({ folderId, onUploadSuccess, draggedFile, children }) => {
+export interface FileUploadRef {
+  open: () => void;
+}
+
+const FileUpload = React.forwardRef<FileUploadRef, FileUploadProps>(({ folderId, sectionId, onUploadSuccess, draggedFile, children }, ref) => {
   const { user } = useAuth();
   const { addActivity } = useRecentActivity();
   const [isUploading, setIsUploading] = useState(false);
@@ -23,6 +28,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ folderId, onUploadSuccess, drag
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [metadata, setMetadata] = useState({ title: '', category: '', tags: '', retentionDate: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  React.useImperativeHandle(ref, () => ({
+    open: () => fileInputRef.current?.click()
+  }));
 
   React.useEffect(() => {
     if (draggedFile) {
@@ -54,7 +63,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ folderId, onUploadSuccess, drag
     };
 
     try {
-      const result: any = await uploadFile(folderId, selectedFile, finalMetadata, metadata.retentionDate || undefined);
+      const result: any = await uploadFile(folderId || null, selectedFile, finalMetadata, metadata.retentionDate || undefined, sectionId);
       if (result?.pending) {
         toast.info(result.message);
       } else {
@@ -85,9 +94,21 @@ const FileUpload: React.FC<FileUploadProps> = ({ folderId, onUploadSuccess, drag
         onChange={handleFileSelect}
       />
       {children ? (
-        <div onClick={() => fileInputRef.current?.click()}>
-          {children}
-        </div>
+        React.isValidElement(children) ? React.cloneElement(children as React.ReactElement, {
+          onClick: (e: any) => {
+            fileInputRef.current?.click();
+            if ((children as React.ReactElement).props.onClick) {
+              (children as React.ReactElement).props.onClick(e);
+            }
+          },
+          onSelect: (e: any) => {
+            e.preventDefault();
+            fileInputRef.current?.click();
+            if ((children as React.ReactElement).props.onSelect) {
+              (children as React.ReactElement).props.onSelect(e);
+            }
+          }
+        }) : children
       ) : (
         <Button 
           onClick={() => fileInputRef.current?.click()} 
@@ -154,6 +175,6 @@ const FileUpload: React.FC<FileUploadProps> = ({ folderId, onUploadSuccess, drag
       </Dialog>
     </div>
   );
-};
+});
 
 export default FileUpload;

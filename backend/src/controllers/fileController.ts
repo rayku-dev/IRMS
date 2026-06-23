@@ -85,7 +85,11 @@ export const getFiles = async (req: Request, res: Response): Promise<void> => {
     
     const query: any = {};
     if (sectionId) query.sectionId = String(sectionId);
-    if (folderId) query.folderId = String(folderId);
+    if (folderId === 'null') {
+      query.folderId = null;
+    } else if (folderId) {
+      query.folderId = String(folderId);
+    }
     if (isArchived !== undefined) query.isArchived = isArchived === 'true';
 
     const files = await prisma.file.findMany({
@@ -476,6 +480,58 @@ export const getComments = async (req: Request, res: Response): Promise<void> =>
     res.json(mapped);
   } catch (error) {
     console.error('Get comments error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const queueForDisposal = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    if (req.user?.role !== 'admin') {
+      res.status(403).json({ message: 'Forbidden: Admin access required to initiate disposal' });
+      return;
+    }
+
+    const file = await prisma.file.findUnique({ where: { id } });
+    if (!file) {
+      res.status(404).json({ message: 'File not found' });
+      return;
+    }
+
+    // Check if there is already a pending disposal request
+    const existingRequest = await prisma.approvalRequest.findFirst({
+      where: {
+        entityId: id,
+        actionType: 'DISPOSE_FILE',
+        status: 'PENDING'
+      }
+    });
+
+    if (existingRequest) {
+      res.status(400).json({ message: 'File is already queued for disposal' });
+      return;
+    }
+
+    const request = await prisma.approvalRequest.create({
+      data: {
+        actionType: 'DISPOSE_FILE',
+        entityType: 'File',
+        entityId: file.id,
+        payload: {
+          fileId: file.id,
+          originalName: file.filename,
+          reason: 'Manual Disposal Initiated',
+          path: file.path,
+          action: 'DISPOSE_FILE'
+        },
+        requesterId: req.user.id
+      }
+    });
+
+    res.status(202).json({ pending: true, message: 'File queued for disposal approval', request });
+  } catch (error) {
+    console.error('Queue for disposal error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

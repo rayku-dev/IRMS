@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../utils/prisma.js';
 import { z } from 'zod';
 import { logAuditAction } from '../services/auditService.js';
+import { supabase } from '../utils/supabase.js';
 
 const CreateFolderSchema = z.object({
   name: z.string().min(1),
@@ -174,7 +175,22 @@ export const deleteFolder = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    // Delete associated files
+    // Fetch associated files to get their paths
+    const filesToDelete = await prisma.file.findMany({
+      where: { folderId: id },
+      select: { path: true }
+    });
+
+    // Delete from Supabase bucket
+    const filePaths = filesToDelete.map(f => f.path);
+    if (filePaths.length > 0) {
+      const { error } = await supabase.storage.from('irms-files').remove(filePaths);
+      if (error) {
+        console.error('Failed to delete some files from Supabase during folder deletion:', error);
+      }
+    }
+
+    // Delete associated files from database
     await prisma.file.deleteMany({ where: { folderId: id } });
     
     // Delete the folder itself

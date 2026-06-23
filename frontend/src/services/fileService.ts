@@ -22,15 +22,22 @@ export interface FileVersionData {
   createdAt: string;
 }
 
-export const getFiles = async (folderId: string) => {
-  const response = await api.get(`/files?folderId=${folderId}`);
+export const getFiles = async (folderId?: string, sectionId?: string) => {
+  let url = '/files?';
+  if (folderId) {
+    url += `folderId=${folderId}&`;
+  } else if (sectionId) {
+    url += `folderId=null&sectionId=${sectionId}&`;
+  }
+  const response = await api.get(url);
   return response.data;
 };
 
-export const uploadFile = async (folderId: string, file: File, metadata?: any, retentionDate?: string): Promise<any> => {
+export const uploadFile = async (folderId: string | null, file: File, metadata?: any, retentionDate?: string, sectionId?: string): Promise<any> => {
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('folderId', folderId);
+  if (folderId) formData.append('folderId', folderId);
+  if (sectionId) formData.append('sectionId', sectionId);
   if (metadata) {
     formData.append('metadata', JSON.stringify(metadata));
   }
@@ -38,9 +45,7 @@ export const uploadFile = async (folderId: string, file: File, metadata?: any, r
     formData.append('retentionDate', retentionDate);
   }
 
-  const response = await api.post('/files/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const response = await api.post('/files/upload', formData);
   return response.data;
 };
 
@@ -48,9 +53,7 @@ export const uploadFileVersion = async (id: string, file: File): Promise<any> =>
   const formData = new FormData();
   formData.append('file', file);
   
-  const response = await api.post(`/files/${id}/versions`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const response = await api.post(`/files/${id}/versions`, formData);
   return response.data;
 };
 

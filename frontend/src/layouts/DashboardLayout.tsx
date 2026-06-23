@@ -1,11 +1,20 @@
-import { useState, useEffect } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Moon, Sun, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { Notifications } from '@/components/Notifications';
+import { Separator } from '@/components/ui/separator';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 
 const DarkModeToggle = () => {
   const [isDark, setIsDark] = useState(false);
@@ -59,6 +68,7 @@ const FullscreenToggle = () => {
 const DashboardLayout = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (!user) {
@@ -66,45 +76,59 @@ const DashboardLayout = () => {
     }
   }, [user, navigate]);
 
+  // Generate breadcrumbs from path
+  const paths = location.pathname.split('/').filter(Boolean);
+  
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen bg-background w-full">
-        <AppSidebar />
-        
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Top bar */}
-          <header className="bg-card shadow-sm border-b px-6 py-4 sticky top-0 z-30">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-                <div className="hidden lg:block">
-                  <h2 className="text-lg font-semibold text-foreground">
-                    Electronic Records Management System
-                  </h2>
-                </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <span className="text-sm text-muted-foreground hidden md:block">
-                  {new Date().toLocaleString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric',
-                  })}
-                </span>
-                <Notifications />
-                <FullscreenToggle />
-                <DarkModeToggle />
-              </div>
-            </div>
-          </header>
-
-          {/* Page content */}
-          <main className="flex-1 p-6 overflow-auto">
-            <Outlet />
-          </main>
+      <AppSidebar />
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4 sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="mr-2 h-4" />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem className="hidden md:block">
+                  <BreadcrumbLink href="/">IRMS</BreadcrumbLink>
+                </BreadcrumbItem>
+                {paths.map((path, index) => {
+                  const isLast = index === paths.length - 1;
+                  const title = path.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                  return (
+                    <React.Fragment key={path}>
+                      <BreadcrumbSeparator className="hidden md:block" />
+                      <BreadcrumbItem>
+                        {isLast ? (
+                          <BreadcrumbPage>{title}</BreadcrumbPage>
+                        ) : (
+                          <BreadcrumbLink href={`/${paths.slice(0, index + 1).join('/')}`} className="hidden md:block">
+                            {title}
+                          </BreadcrumbLink>
+                        )}
+                      </BreadcrumbItem>
+                    </React.Fragment>
+                  );
+                })}
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <span className="text-sm text-muted-foreground hidden md:block">
+              {new Date().toLocaleString('en-US', { 
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+              })}
+            </span>
+            <Notifications />
+            <FullscreenToggle />
+            <DarkModeToggle />
+          </div>
+        </header>
+        <div className="flex flex-1 flex-col gap-4 p-4 pt-4">
+          <Outlet />
         </div>
-      </div>
+      </SidebarInset>
     </SidebarProvider>
   );
 };
