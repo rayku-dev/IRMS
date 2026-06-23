@@ -1,8 +1,5 @@
-import * as React from "react"
 import {
-  Folder,
   MoreHorizontal,
-  Share,
   Trash2,
   Edit,
   Archive,

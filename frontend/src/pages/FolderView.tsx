@@ -7,7 +7,7 @@ import { getFiles, deleteFile, downloadFile, type FileData } from '../services/f
 import { api } from '../lib/api';
 import { 
   FolderOpen, Folder as FolderIcon, Archive, Database, Warehouse, Building2, FileText, Calendar, 
-  Plus, Trash2, Edit, Upload as UploadIcon, Grid as GridIcon, List as ListIcon, MoreVertical, File as FileIcon, Download, CornerUpRight, Eye, User, Share, Info, ArrowUp, ArrowDown, ListOrdered
+  Plus, Trash2, Edit, Upload as UploadIcon, Grid as GridIcon, List as ListIcon, MoreVertical, File as FileIcon, Download, CornerUpRight, Eye, Share, Info, ArrowUp, ArrowDown, ListOrdered
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';

@@ -94,21 +94,21 @@ const FileUpload = React.forwardRef<FileUploadRef, FileUploadProps>(({ folderId,
         onChange={handleFileSelect}
       />
       {children ? (
-        React.isValidElement(children) ? React.cloneElement(children as React.ReactElement, {
+        React.isValidElement(children) ? React.cloneElement(children as React.ReactElement<any>, {
           onClick: (e: any) => {
             fileInputRef.current?.click();
-            if ((children as React.ReactElement).props.onClick) {
-              (children as React.ReactElement).props.onClick(e);
+            if ((children as React.ReactElement<any>).props.onClick) {
+              (children as React.ReactElement<any>).props.onClick(e);
             }
           },
           onSelect: (e: any) => {
             e.preventDefault();
             fileInputRef.current?.click();
-            if ((children as React.ReactElement).props.onSelect) {
-              (children as React.ReactElement).props.onSelect(e);
+            if ((children as React.ReactElement<any>).props.onSelect) {
+              (children as React.ReactElement<any>).props.onSelect(e);
             }
           }
-        }) : children
+        } as any) : children
       ) : (
         <Button 
           onClick={() => fileInputRef.current?.click()} 

@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
-import { Trash2, RefreshCw, FileText, Download } from 'lucide-react';
+import { Trash2, RefreshCw, FileText } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';

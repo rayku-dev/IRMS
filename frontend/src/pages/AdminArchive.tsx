@@ -48,7 +48,7 @@ const AdminArchive: React.FC = () => {
     }
   };
 
-  const handleDownload = async (id: string, fileName: string) => {
+  const handleDownload = async (id: string) => {
     try {
       const response = await api.get(`/files/download/${id}`);
       if (response.data && response.data.url) {
@@ -120,7 +120,7 @@ const AdminArchive: React.FC = () => {
                           size="sm"
                           variant="outline"
                           className="h-8"
-                          onClick={() => handleDownload(doc.id, doc.originalName)}
+                          onClick={() => handleDownload(doc.id)}
                         >
                           <Download className="h-4 w-4 mr-1" /> Download
                         </Button>

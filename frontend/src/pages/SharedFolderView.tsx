@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPublicFolderInfo } from '../services/folderService';
-import { Loader2, Folder as FolderIcon, FileIcon, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Loader2, Folder as FolderIcon, FileIcon } from 'lucide-react';
 import { format } from 'date-fns';
 
 const SharedFolderView: React.FC = () => {
