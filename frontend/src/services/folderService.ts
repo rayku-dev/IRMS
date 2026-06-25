@@ -9,9 +9,12 @@ export interface Folder {
   updatedAt: string;
 }
 
-export const getAllFolders = async (sectionId: string, parentId?: string, page = 1, limit = 50) => {
-  const params = new URLSearchParams({ sectionId, page: page.toString(), limit: limit.toString() });
+export const getAllFolders = async (sectionId?: string, parentId?: string, page = 1, limit = 50, isArchived?: boolean, isDisposed?: boolean) => {
+  const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+  if (sectionId) params.append('sectionId', sectionId);
   if (parentId) params.append('parentId', parentId);
+  if (isArchived !== undefined) params.append('isArchived', isArchived.toString());
+  if (isDisposed !== undefined) params.append('isDisposed', isDisposed.toString());
   const response = await api.get(`/folders?${params.toString()}`);
   return response.data; // { folders, pagination }
 };
@@ -33,5 +36,20 @@ export const deleteFolder = async (id: string): Promise<any> => {
 
 export const getPublicFolderInfo = async (id: string): Promise<any> => {
   const response = await api.get(`/folders/info/${id}`);
+  return response.data;
+};
+
+export const queueArchiveFolder = async (id: string): Promise<any> => {
+  const response = await api.post(`/folders/${id}/queue-archive`);
+  return response.data;
+};
+
+export const queueDisposeFolder = async (id: string): Promise<any> => {
+  const response = await api.post(`/folders/${id}/queue-disposal`);
+  return response.data;
+};
+
+export const permanentlyDisposeFolder = async (id: string): Promise<any> => {
+  const response = await api.delete(`/folders/${id}/permanently-dispose`);
   return response.data;
 };

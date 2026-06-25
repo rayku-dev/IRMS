@@ -22,13 +22,15 @@ export interface FileVersionData {
   createdAt: string;
 }
 
-export const getFiles = async (folderId?: string, sectionId?: string) => {
+export const getFiles = async (folderId?: string, sectionId?: string, isArchived?: boolean, isDisposed?: boolean) => {
   let url = '/files?';
   if (folderId) {
     url += `folderId=${folderId}&`;
   } else if (sectionId) {
     url += `folderId=null&sectionId=${sectionId}&`;
   }
+  if (isArchived !== undefined) url += `isArchived=${isArchived}&`;
+  if (isDisposed !== undefined) url += `isDisposed=${isDisposed}&`;
   const response = await api.get(url);
   return response.data;
 };
@@ -110,5 +112,20 @@ export const getPublicLink = async (id: string): Promise<string> => {
 
 export const getPublicFileInfo = async (id: string): Promise<any> => {
   const response = await api.get(`/files/info/${id}`);
+  return response.data;
+};
+
+export const queueArchiveFile = async (id: string): Promise<any> => {
+  const response = await api.post(`/files/${id}/queue-archive`);
+  return response.data;
+};
+
+export const queueDisposeFile = async (id: string): Promise<any> => {
+  const response = await api.post(`/files/${id}/queue-disposal`);
+  return response.data;
+};
+
+export const permanentlyDisposeFile = async (id: string): Promise<any> => {
+  const response = await api.delete(`/files/${id}/permanently-dispose`);
   return response.data;
 };

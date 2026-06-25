@@ -81,7 +81,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<void> => 
 
 export const getFiles = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { sectionId, folderId, isArchived } = req.query;
+    const { sectionId, folderId, isArchived, isDisposed } = req.query;
     
     const query: any = {};
     if (sectionId) query.sectionId = String(sectionId);
@@ -91,6 +91,7 @@ export const getFiles = async (req: Request, res: Response): Promise<void> => {
       query.folderId = String(folderId);
     }
     if (isArchived !== undefined) query.isArchived = isArchived === 'true';
+    query.isDisposed = isDisposed === 'true';
 
     const files = await prisma.file.findMany({
       where: query,
@@ -484,6 +485,38 @@ export const getComments = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
+export const queueArchiveFile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    if (req.user?.role !== 'admin') {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
+
+    const file = await prisma.file.findUnique({ where: { id } });
+    if (!file) {
+      res.status(404).json({ message: 'File not found' });
+      return;
+    }
+
+    const request = await prisma.approvalRequest.create({
+      data: {
+        actionType: 'ARCHIVE_FILE',
+        entityType: 'File',
+        entityId: file.id,
+        payload: { fileId: file.id, name: file.filename },
+        requesterId: req.user.id
+      }
+    });
+
+    res.status(202).json({ pending: true, message: 'File queued for archive approval', request });
+  } catch (error) {
+    console.error('Queue archive error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export const queueForDisposal = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -496,6 +529,11 @@ export const queueForDisposal = async (req: Request, res: Response): Promise<voi
     const file = await prisma.file.findUnique({ where: { id } });
     if (!file) {
       res.status(404).json({ message: 'File not found' });
+      return;
+    }
+
+    if (!file.isArchived) {
+      res.status(400).json({ message: 'Only archived files can be queued for disposal' });
       return;
     }
 
@@ -532,6 +570,46 @@ export const queueForDisposal = async (req: Request, res: Response): Promise<voi
     res.status(202).json({ pending: true, message: 'File queued for disposal approval', request });
   } catch (error) {
     console.error('Queue for disposal error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const permanentlyDisposeFile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    if (req.user?.role !== 'admin') {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
+
+    const file = await prisma.file.findUnique({ where: { id } });
+    if (!file || !file.isDisposed) {
+      res.status(404).json({ message: 'File not found or not in disposed state' });
+      return;
+    }
+
+    try {
+      await supabase.storage.from('irms-files').remove([file.path]);
+    } catch (err: any) {
+      console.error('Supabase delete error:', err);
+    }
+
+    await prisma.file.delete({ where: { id } });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: req.user.id,
+        action: 'dispose',
+        entity: 'file',
+        entityId: id,
+        details: { fileId: file.id, reason: 'Permanent Disposal' },
+      },
+    });
+
+    res.json({ message: 'File permanently disposed' });
+  } catch (error) {
+    console.error('Dispose file error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

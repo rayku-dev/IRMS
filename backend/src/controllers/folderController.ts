@@ -16,12 +16,20 @@ export const getFolders = async (req: Request, res: Response): Promise<void> => 
     const sectionId = req.query.sectionId as string;
     const parentId = req.query.parentId as string | undefined;
 
-    if (!sectionId) {
-      res.status(400).json({ message: 'sectionId is required' });
+    const isArchived = req.query.isArchived === 'true';
+    const isDisposed = req.query.isDisposed === 'true';
+
+    if (!sectionId && !isArchived && !isDisposed) {
+      res.status(400).json({ message: 'sectionId is required for active folders' });
       return;
     }
 
-    const where: any = { sectionId };
+    const where: any = { 
+      isArchived,
+      isDisposed
+    };
+    
+    if (sectionId) where.sectionId = sectionId;
     
     if (parentId !== undefined) {
       where.parentId = parentId === 'null' ? null : parentId;
@@ -200,6 +208,129 @@ export const deleteFolder = async (req: Request, res: Response): Promise<void> =
 
     res.json({ message: 'Folder deleted successfully' });
   } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const queueArchiveFolder = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const folder = await prisma.folder.findUnique({ where: { id } });
+    if (!folder) {
+      res.status(404).json({ message: 'Folder not found' });
+      return;
+    }
+    
+    if (!req.user) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    const request = await prisma.approvalRequest.create({
+      data: {
+        actionType: 'ARCHIVE_FOLDER',
+        entityType: 'Folder',
+        entityId: id,
+        payload: { name: folder.name },
+        requesterId: req.user.id
+      }
+    });
+
+    res.status(202).json({ pending: true, message: 'Folder queued for archive approval', request });
+  } catch (error: any) {
+    console.error('Error queueing folder archive:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const queueDisposeFolder = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const folder = await prisma.folder.findUnique({ where: { id } });
+    if (!folder) {
+      res.status(404).json({ message: 'Folder not found' });
+      return;
+    }
+    
+    if (!folder.isArchived) {
+      res.status(400).json({ message: 'Only archived folders can be queued for disposal' });
+      return;
+    }
+    
+    if (!req.user) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    const request = await prisma.approvalRequest.create({
+      data: {
+        actionType: 'DISPOSE_FOLDER',
+        entityType: 'Folder',
+        entityId: id,
+        payload: { name: folder.name },
+        requesterId: req.user.id
+      }
+    });
+
+    res.status(202).json({ pending: true, message: 'Folder queued for disposal approval', request });
+  } catch (error: any) {
+    console.error('Error queueing folder disposal:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+const recursivelyDeleteFolder = async (tx: any, folderId: string) => {
+  // fetch children
+  const children = await tx.folder.findMany({ where: { parentId: folderId } });
+  for (const child of children) {
+    await recursivelyDeleteFolder(tx, child.id);
+  }
+  
+  // delete files inside
+  const files = await tx.file.findMany({ where: { folderId } });
+  if (files.length > 0) {
+    try {
+      const { supabase } = await import('../utils/supabase.js');
+      await supabase.storage.from('irms-files').remove(files.map((f: any) => f.path));
+    } catch (err) {}
+    await tx.file.deleteMany({ where: { folderId } });
+  }
+
+  // delete folder
+  await tx.folder.delete({ where: { id: folderId } });
+};
+
+export const permanentlyDisposeFolder = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    if (req.user?.role !== 'admin') {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
+
+    const folder = await prisma.folder.findUnique({ where: { id } });
+    if (!folder || !folder.isDisposed) {
+      res.status(404).json({ message: 'Folder not found or not in disposed state' });
+      return;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await recursivelyDeleteFolder(tx, id);
+      await tx.auditLog.create({
+        data: {
+          userId: req.user!.id,
+          action: 'dispose',
+          entity: 'folder',
+          entityId: id,
+          details: { folderId: id, reason: 'Permanent Disposal' },
+        },
+      });
+    });
+
+    res.json({ message: 'Folder permanently disposed' });
+  } catch (error) {
+    console.error('Dispose folder error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

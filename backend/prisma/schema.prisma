@@ -68,6 +68,8 @@ model Folder {
   updatedAt   DateTime  @default(now()) @updatedAt
   deletedAt   DateTime?
   order       Int
+  isArchived  Boolean   @default(false)
+  isDisposed  Boolean   @default(false)
 
   @@index([sectionId])
   @@index([parentId])
@@ -90,6 +92,7 @@ model File {
   folder        Folder?   @relation(fields: [folderId], references: [id])
   folderId      String?
   isArchived    Boolean   @default(false)
+  isDisposed    Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @default(now()) @updatedAt
   deletedAt     DateTime?

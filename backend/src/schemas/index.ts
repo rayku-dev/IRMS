@@ -41,6 +41,8 @@ export const FolderSchema = z.object({
   sectionId: z.string().uuid(),
   parentId: z.string().uuid().nullable().optional(),
   order: z.number().int(),
+  isArchived: z.boolean().default(false),
+  isDisposed: z.boolean().default(false),
 });
 
 export const FileSchema = z.object({
@@ -57,5 +59,6 @@ export const FileSchema = z.object({
   sectionId: z.string().uuid().nullable().optional(),
   folderId: z.string().uuid().nullable().optional(),
   isArchived: z.boolean().default(false),
+  isDisposed: z.boolean().default(false),
   metadata: z.any().nullable().optional(),
 });

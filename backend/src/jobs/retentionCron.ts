@@ -12,13 +12,13 @@ export const startRetentionCron = () => {
     try {
       const now = new Date();
 
-      // Find all files that have passed their retention date, are not yet archived, and don't already have a pending archival request
+      // Find all files that have passed their retention date, and are not yet disposed
       const expiredFiles = await prisma.file.findMany({
         where: {
           retentionDate: {
             lte: now,
           },
-          isArchived: false,
+          isDisposed: false,
         },
       });
 
@@ -46,7 +46,7 @@ export const startRetentionCron = () => {
           where: {
             entityId: file.id,
             status: 'PENDING',
-            actionType: 'ARCHIVE_FILE', // or DISPOSE_FILE
+            actionType: 'DISPOSE_FILE',
           },
         });
 
@@ -57,7 +57,7 @@ export const startRetentionCron = () => {
         // Create an Approval Request for the admin to review
         await prisma.approvalRequest.create({
           data: {
-            actionType: 'ARCHIVE_FILE', // We queue for Archival, admin can approve to archive
+            actionType: 'DISPOSE_FILE', // We queue for Disposal
             entityType: 'File',
             entityId: file.id,
             requesterId: systemAdmin.id, // Act as system
@@ -66,13 +66,13 @@ export const startRetentionCron = () => {
               originalName: file.filename,
               reason: 'NAP Retention Schedule Expired',
               retentionDate: file.retentionDate,
-              action: 'ARCHIVE_FILE'
+              action: 'DISPOSE_FILE'
             },
             status: 'PENDING',
           },
         });
 
-        console.log(`[Cron] Queued ApprovalRequest (ARCHIVE_FILE) for File ID: ${file.id}`);
+        console.log(`[Cron] Queued ApprovalRequest (DISPOSE_FILE) for File ID: ${file.id}`);
       }
 
       console.log('[Cron] NAP Retention check completed.');

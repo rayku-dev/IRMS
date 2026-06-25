@@ -1,6 +1,15 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma.js';
 
+const recursivelyUpdateFolderState = async (tx: any, folderId: string, data: any) => {
+  await tx.folder.update({ where: { id: folderId }, data });
+  await tx.file.updateMany({ where: { folderId }, data });
+  const children = await tx.folder.findMany({ where: { parentId: folderId }, select: { id: true } });
+  for (const child of children) {
+    await recursivelyUpdateFolderState(tx, child.id, data);
+  }
+};
+
 // Get all pending approvals (Admin only)
 export const getPendingApprovals = async (req: Request, res: Response) => {
   try {
@@ -109,22 +118,45 @@ export const approveRequest = async (req: Request, res: Response) => {
 
         case 'DISPOSE_FILE':
           if (!request.entityId) throw new Error('Missing file ID');
-          // Same logic as DELETE_FILE essentially
-          const fileToDispose = await tx.file.findUnique({ where: { id: request.entityId } });
-          if (fileToDispose) {
-            postCommitTasks.push(async () => {
-              const { supabase } = await import('../utils/supabase.js');
-              await supabase.storage.from('irms-files').remove([fileToDispose.path]);
-            });
-          }
-          await tx.file.delete({ where: { id: request.entityId } });
+          await tx.file.update({
+            where: { id: request.entityId },
+            data: { isDisposed: true }
+          });
           await tx.auditLog.create({
             data: {
               userId: adminId,
-              action: 'dispose',
+              action: 'dispose_queue',
               entity: 'file',
               entityId: request.entityId,
-              details: { reason: 'NAP Schedule met', approvedBy: adminId, requesterId: request.requesterId },
+              details: { reason: 'For Disposal', approvedBy: adminId, requesterId: request.requesterId },
+            },
+          });
+          break;
+
+        case 'ARCHIVE_FOLDER':
+          if (!request.entityId) throw new Error('Missing folder ID');
+          await recursivelyUpdateFolderState(tx, request.entityId, { isArchived: true });
+          await tx.auditLog.create({
+            data: {
+              userId: adminId,
+              action: 'archive',
+              entity: 'folder',
+              entityId: request.entityId,
+              details: { approvedBy: adminId, requesterId: request.requesterId },
+            },
+          });
+          break;
+
+        case 'DISPOSE_FOLDER':
+          if (!request.entityId) throw new Error('Missing folder ID');
+          await recursivelyUpdateFolderState(tx, request.entityId, { isDisposed: true });
+          await tx.auditLog.create({
+            data: {
+              userId: adminId,
+              action: 'dispose_queue',
+              entity: 'folder',
+              entityId: request.entityId,
+              details: { approvedBy: adminId, requesterId: request.requesterId },
             },
           });
           break;

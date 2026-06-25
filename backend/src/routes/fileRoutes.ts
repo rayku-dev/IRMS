@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { uploadFile, getFiles, deleteFile, downloadFile, moveFile, getPublicLink, getPublicFileInfo, downloadPublicFile, downloadTemplate, uploadTemplate, updateFileMetadata, uploadFileVersion, getFileVersions, getComments, queueForDisposal } from '../controllers/fileController.js';
+import { uploadFile, getFiles, deleteFile, downloadFile, moveFile, getPublicLink, getPublicFileInfo, downloadPublicFile, downloadTemplate, uploadTemplate, updateFileMetadata, uploadFileVersion, getFileVersions, getComments, queueForDisposal, permanentlyDisposeFile, queueArchiveFile } from '../controllers/fileController.js';
 import { authenticate, authorize } from '../middleware/authMiddleware.js';
 import { upload } from '../middleware/uploadMiddleware.js';
 
@@ -19,7 +19,10 @@ router.get('/:id/public-link', getPublicLink);
 router.get('/:id/versions', getFileVersions);
 router.post('/:id/versions', upload.single('file'), uploadFileVersion);
 router.get('/:id/comments', getComments);
+router.post('/:id/queue-archive', authorize(['admin']), queueArchiveFile);
 router.post('/:id/dispose', authorize(['admin']), queueForDisposal);
+router.post('/:id/queue-disposal', authorize(['admin']), queueForDisposal);
+router.delete('/:id/permanently-dispose', authorize(['admin']), permanentlyDisposeFile);
 router.delete('/:id', authorize(['admin', 'user']), deleteFile);
 router.put('/:id/move', moveFile);
 router.put('/:id/metadata', updateFileMetadata);

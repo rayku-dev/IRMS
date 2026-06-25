@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useRecentActivity } from '../contexts/RecentActivityContext';
-import { getAllFolders, createFolder, deleteFolder, renameFolder, type Folder as FolderType } from '../services/folderService';
-import { getFiles, deleteFile, downloadFile, type FileData } from '../services/fileService';
+import { getAllFolders, createFolder, deleteFolder, renameFolder, queueArchiveFolder, type Folder as FolderType } from '../services/folderService';
+import { getFiles, deleteFile, downloadFile, queueArchiveFile, type FileData } from '../services/fileService';
 import { api } from '../lib/api';
 import { 
   FolderOpen, Folder as FolderIcon, Archive, Database, Warehouse, Building2, FileText, Calendar, 
@@ -177,6 +177,20 @@ const FolderView: React.FC = () => {
     }
   };
 
+  const handleQueueArchiveFolder = async (id: string) => {
+    if (!window.confirm('Are you sure you want to queue this folder for archive?')) return;
+    try {
+      const result: any = await queueArchiveFolder(id);
+      if (result?.pending) {
+        toast.info(result.message);
+      } else {
+        toast.success('Folder queued for archive');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to queue folder for archive');
+    }
+  };
+
   const handleDeleteFile = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this file?')) return;
     try {
@@ -190,6 +204,20 @@ const FolderView: React.FC = () => {
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete file');
+    }
+  };
+
+  const handleQueueArchiveFile = async (id: string) => {
+    if (!window.confirm('Are you sure you want to queue this file for archive?')) return;
+    try {
+      const result: any = await queueArchiveFile(id);
+      if (result?.pending) {
+        toast.info(result.message);
+      } else {
+        toast.success('File queued for archive');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to queue file for archive');
     }
   };
 
@@ -455,6 +483,9 @@ const FolderView: React.FC = () => {
                                 <Info className="h-4 w-4 mr-2" /> Folder information
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleQueueArchiveFolder(folder.id)}>
+                                <Archive className="h-4 w-4 mr-2" /> Queue for archive
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDeleteFolder(folder.id)} className="text-destructive focus:text-destructive">
                                 <Trash2 className="h-4 w-4 mr-2" /> Move to trash
                               </DropdownMenuItem>
@@ -520,6 +551,9 @@ const FolderView: React.FC = () => {
                                 <Info className="h-4 w-4 mr-2" /> File information
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleQueueArchiveFile(file.id)}>
+                                <Archive className="h-4 w-4 mr-2" /> Queue for archive
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDeleteFile(file.id)} className="text-destructive focus:text-destructive">
                                 <Trash2 className="h-4 w-4 mr-2" /> Move to trash
                               </DropdownMenuItem>
@@ -615,6 +649,9 @@ const FolderView: React.FC = () => {
                                   <Info className="h-4 w-4 mr-2" /> Information
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleQueueArchiveFolder(folder.id)}>
+                                  <Archive className="h-4 w-4 mr-2" /> Queue for archive
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleDeleteFolder(folder.id)} className="text-destructive focus:text-destructive">
                                   <Trash2 className="h-4 w-4 mr-2" /> Move to trash
                                 </DropdownMenuItem>
@@ -696,6 +733,9 @@ const FolderView: React.FC = () => {
                                 <Info className="h-4 w-4 mr-2" /> File information
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleQueueArchiveFile(file.id)}>
+                                <Archive className="h-4 w-4 mr-2" /> Queue for archive
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDeleteFile(file.id)} className="text-destructive focus:text-destructive">
                                 <Trash2 className="h-4 w-4 mr-2" /> Move to trash
                               </DropdownMenuItem>
